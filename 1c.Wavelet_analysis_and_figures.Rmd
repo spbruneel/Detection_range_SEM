@@ -1,0 +1,256 @@
+---
+title: "1b.Wavelet_analysis_and_preprocessing_data"
+author: "Stijn Bruneel"
+date: "25-2-2021"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, echo=FALSE, warning=FALSE, error=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, error=FALSE)
+```
+
+```{r echo=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+RUN="NO"
+if (RUN=="YES"){
+  source("1b.Wavelet_analysis_and_preprocessing_data.R")
+}
+```
+
+```{r}
+distances=read.csv("./data/internal/telemetry/distance.csv")
+```
+
+```{r}
+plot_single_wavelet_analysis<-function(foldername){
+  filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    plot.filename=str_remove(filelist[i],".Rdata")
+    plot.distance=round(distances$distm[which(distances$RecRec==plot.filename)]/50)*50
+    wt.image(wave.test.single, color.key = "interval", main = paste("wavelet power spectrum",plot.filename,"-",plot.distance,"m"),legend.params = list(lab = "wavelet power levels"),periodlab = "period (hours)",show.date = TRUE)
+    wt.avg(wave.test.single, siglvl = 0.05, sigcol = "red",periodlab = "period (hours)",main = paste("Average wavelet power",plot.filename,"-",plot.distance,"m"))
+    wt.phase.image(wave.test.single,main = paste("image of phases",plot.filename,"-",plot.distance,"m"),periodlab = "period (hours)",show.date = TRUE)
+    power.store.temp=as.data.frame(wave.test.single$Period)
+    power.store.temp=cbind(power.store.temp,wave.test.single$Power.avg)
+    power.store.temp=cbind(power.store.temp,wave.test.single$Power.avg.pval)
+    power.store.temp$RecRec=plot.filename
+    power.store.temp$dist=plot.distance
+    colnames(power.store.temp)=c("Period","Power","p","RecRec","distance")
+    if (i == 1){
+      power.store=power.store.temp
+    } else {power.store=rbind(power.store,power.store.temp)}
+  }
+  return(power.store)
+}
+
+plot_double_wavelet_analysis<-function(foldername){
+  filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    plot.filename=str_remove(filelist[i],".Rdata")
+    plot.distance=round(distances$distm[which(distances$RecRec==plot.filename)])
+    wc.image(wave.test.coherence, color.key = "interval", main = paste("wavelet power spectrum",plot.filename,"-",plot.distance,"m"),legend.params = list(lab = "wavelet power levels"),periodlab = "period (hours)")
+    wc.avg(wave.test.coherence, siglvl = 0.05, sigcol = "red",periodlab = "period (hours)",main = paste("average cross-wavelet power",plot.filename,"-",plot.distance,"m"))
+    wc.image(wave.test.coherence, which.image = "wc", main = paste("wavelet coherence, x over y",plot.filename,"-",plot.distance,"m"),legend.params = list(lab = "wavelet coherence levels",lab.line = 3.5, label.digits = 3),periodlab = "period (hours)")
+    wc.avg(wave.test.coherence, which.avg = "wc",siglvl = 0.05, sigcol = 'red',legend.coords = "topleft",periodlab = "period (hours)",main = paste("average cross-wavelet coherence",plot.filename,"-",plot.distance,"m"))
+    wc.phasediff.image(wave.test.coherence, which.contour = "wp",main =  paste("image of phase differences, x over y",plot.filename,"-",plot.distance,"m"),periodlab = "period (hours)")
+    wc.sel.phases(wave.test.coherence, sel.period = 12, show.Angle = TRUE, show.date = TRUE,main =  paste("image of phase differences, x over y, selection period",plot.filename))
+  }
+}
+```
+
+```{r}
+plot.all.wavelets.det.prob<-function(power.store.det,label){
+  power.store.det.plot=power.store.det
+  power.store.det.plot$p[which(power.store.det.plot$p>0.05)]=NA
+  power.store.det.plot$point=NA
+  power.store.det.plot$point[which(is.na(power.store.det.plot$p)==FALSE)]=power.store.det.plot$Power[which(is.na(power.store.det.plot$p)==FALSE)]
+  
+  g<-ggplot(data=power.store.det.plot,aes(x=Period,y=Power))+scale_x_log10(breaks=c(4,6,12,24,48,15*24))
+  g<-g+geom_line(aes(group=RecRec, colour=distance))
+  g<-g+geom_point(data=power.store.det.plot,aes(x=Period,y=point),color="red",size=0.001,shape=4)
+  g<-g+xlab("Period (hours)")+ylab("Average wavelet power")
+  g<-g+theme_minimal()+ylim(0,1.5)+theme(legend.position="none")+annotate("text",y=1.35,x=max(power.store.det.plot$Period),label=label,hjust=1)
+  print(g)
+  
+  seq.plot=c(0,250,500,750,1000)
+  for (i in 1:4){
+    power.store.det.plot.temp<-power.store.det.plot[which(power.store.det.plot$distance>=seq.plot[i] & power.store.det.plot$distance<seq.plot[i+1]),]
+    h<-ggplot(data=power.store.det.plot.temp,aes(x=Period,y=Power))+scale_x_log10(breaks=c(4,6,12,24,48,15*24))
+    h<-h+geom_line(aes(group=RecRec, colour=distance))
+    h<-h+geom_point(data=power.store.det.plot.temp,aes(x=Period,y=point),color="red",size=0.001,shape=4)
+    h<-h+theme_minimal()+ylim(0,1.2)+theme(legend.position="none")
+    print(h)
+  }
+  return(g)
+}
+```
+
+```{r}
+plot.all.wavelets<-function(power.store.det,label){
+  power.store.det.plot=power.store.det
+  power.store.det.plot$p[which(power.store.det.plot$p>0.05)]=NA
+  power.store.det.plot$point=NA
+  power.store.det.plot$point[which(is.na(power.store.det.plot$p)==FALSE)]=power.store.det.plot$Power[which(is.na(power.store.det.plot$p)==FALSE)]
+  
+  g<-ggplot(data=power.store.det.plot,aes(x=Period,y=Power))+scale_x_log10(breaks=c(4,6,12,24,48,15*24))
+  g<-g+geom_line(aes(group=RecRec))
+  g<-g+geom_point(data=power.store.det.plot,aes(x=Period,y=point),color="red",size=0.001,shape=4)
+  g<-g+xlab("Period (hours)")+ylab("Average wavelet power")+ylim(0,1.5)
+  g<-g+theme_minimal()+theme(legend.position="none")+annotate("text",y=1.35,x=max(power.store.det.plot$Period),label=label,hjust=1)
+  print(g)
+  return(g)
+}
+```
+
+# Single wavelet analysis
+
+## Detectability
+
+```{r}
+power.store.det<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg/")
+
+power.store.det.model<-gam(Power~distance+s(Period),data=power.store.det)
+summary(power.store.det.model)
+plot(power.store.det.model)
+```
+
+```{r}
+wavelet.overview.plot.det<-plot.all.wavelets.det.prob(power.store.det,label="Detectability")
+```
+
+## Electrical Conductivity
+
+```{r}
+power.store.cond<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_cond/")
+```
+
+```{r}
+wavelet.overview.plot.cond<-plot.all.wavelets(power.store.cond,label="Conductivity")
+```
+
+## Noise
+
+```{r}
+power.store.noise<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_noise/")
+```
+
+```{r}
+wavelet.overview.plot.noise<-plot.all.wavelets(power.store.noise,label="Noise")
+```
+
+## Tilt angle
+
+```{r}
+power.store.tilt<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_tilt/")
+```
+
+```{r}
+wavelet.overview.plot.tilt<-plot.all.wavelets(power.store.tilt,label="Tilt angle")
+```
+
+## Discharge (with direction)
+
+```{r}
+power.store.q<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_q/")
+```
+
+```{r}
+wavelet.overview.plot.q<-plot.all.wavelets(power.store.q,label="Water velocity")
+```
+
+## Discharge (without direction)
+
+```{r}
+power.store.q.abs<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_q_abs/")
+```
+
+```{r}
+wavelet.overview.plot.q.abs<-plot.all.wavelets(power.store.q.abs,label="Water speed")
+```
+
+```{r eval=FALSE}
+plot_single_wavelet_analysis("./models/single_wavelet_data_agg_q_magn/")
+```
+
+## Temperature
+
+```{r}
+power.store.temp<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_temp/")
+```
+
+```{r}
+wavelet.overview.plot.temp<-plot.all.wavelets(power.store.temp,label="Temperature")
+```
+
+## Water height
+
+```{r}
+power.store.water.height<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_water_height/")
+```
+
+```{r}
+wavelet.overview.plot.water.height<-plot.all.wavelets(power.store.water.height,label="Water height")
+```
+
+## Wind speed
+
+```{r}
+power.store.wind<-plot_single_wavelet_analysis("./models/single_wavelet_data_agg_wind/")
+```
+
+```{r}
+wavelet.overview.plot.wind<-plot.all.wavelets(power.store.wind,label="Wind speed")
+```
+
+```{r}
+gg<-ggarrange(wavelet.overview.plot.det,
+          wavelet.overview.plot.noise,
+          wavelet.overview.plot.tilt,
+          wavelet.overview.plot.water.height,
+          wavelet.overview.plot.q,
+          wavelet.overview.plot.q.abs,
+          wavelet.overview.plot.temp,
+          wavelet.overview.plot.cond,
+          wavelet.overview.plot.wind,
+          ncol = 3, nrow = 3
+          )
+gg
+ggsave("./figures/singleWaveletAverageAll.pdf",width = 170,height=170,plot=gg,units="mm")
+dev.off()
+```
+
+# Cross-wavelet analysis 
+
+## Detectability and water height
+
+```{r}
+plot_double_wavelet_analysis("./models/coherence_wavelet_data_agg_water_height/")
+```
+
+## Detectability and discharge (with direction)
+
+```{r}
+plot_double_wavelet_analysis("./models/coherence_wavelet_data_agg_q/")
+```
+
+## Detectability and discharge (without direction)
+
+```{r}
+plot_double_wavelet_analysis("./models/coherence_wavelet_data_agg_q_abs/")
+```
+
+## Detectability and noise
+
+```{r}
+plot_double_wavelet_analysis("./models/coherence_wavelet_data_agg_noise/")
+```

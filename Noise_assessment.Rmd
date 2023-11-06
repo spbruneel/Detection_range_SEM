@@ -1,0 +1,138 @@
+---
+title: "Noise_assessment"
+author: "Stijn Bruneel"
+date: "19-2-2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/data_agg_zeros_added_with_env.csv")
+df$timebin<-as.POSIXct(df$timebin, tz="UTC")
+df$hours=hour(df$timebin)
+df$station_name_timebin=paste(df$station_name,df$timebin)
+df=df[ !duplicated(df$station_name_timebin), ]
+df$tidal.phase[which(df$tidal.phase=="kentering")]="flood"
+```
+
+```{r}
+df <- df %>%
+  dplyr::mutate(Tilt_angle.scaled = scale_vars(Tilt_angle),
+                water.height.schoonaarde.scaled = scale_vars(water.height.schoonaarde),
+                ebb.period.scaled = scale_vars(ebb.period),
+                flood.period.scaled = scale_vars(flood.period),
+                cond.schellebelle.scaled = scale_vars(cond.schellebelle),
+                q.melle.abs.scaled = scale_vars(q.melle.abs),
+                Average_noise.scaled = scale_vars(Average_noise),
+                Temperature.scaled=scale_vars(Temperature),
+                O2.schellebelle.scaled=scale_vars(O2.schellebelle),
+                distm.scaled=scale_vars(distm),
+                wind.v.liedekerke.scaled=scale_vars(wind.v.liedekerke),
+                neerslag.zele.scaled=scale_vars(neerslag.zele),
+                timedif.boat_smallest.scaled=scale_vars(timedif.boat_smallest),
+                count_sum_boats.scaled=scale_vars(count_sum_boats)
+  )
+```
+
+```{r}
+df_150m<-df[which(df$RecRec=="Rt4 Rt1"),]
+df_150m <- filter(df_150m,timebin>=as.POSIXct("2020-03-01 01:00:00",tz="UTC"),timebin<as.POSIXct("2020-03-07 01:00:00",tz="UTC"))
+```
+
+```{r}
+p <- df_150m %>%
+  ggplot( aes(x=timebin, y=Average_noise)) +
+    geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("Det.Prob") +
+    theme_ipsum() + geom_line(aes(x=timebin, y=q.melle))
+
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+p
+
+df_150m=df_150m[order(df_150m$timebin),]
+acf(df_150m$Average_noise)
+ccf(df_150m$q.melle,df_150m$Average_noise)
+ccf(df_150m$signal.to.noise,df_150m$Average_noise)
+ccf(df_150m$water.height.schoonaarde,df_150m$Average_noise)
+```
+
+```{r}
+hist(df$Average_noise)
+hist(df$Average_noise[which(df$station_name=="Rt1")])
+hist(df$Average_noise[which(df$station_name=="Rt2")])
+hist(df$Average_noise[which(df$station_name=="Rt3")])
+hist(df$Average_noise[which(df$station_name=="Rt4")])
+hist(df$Average_noise[which(df$station_name=="Rt5")])
+hist(df$Average_noise[which(df$station_name=="Rt6")])
+hist(df$Average_noise[which(df$station_name=="Rt7")])
+hist(df$Average_noise[which(df$station_name=="Rt8")])
+
+```
+
+```{r}
+form1=as.formula(Average_noise ~  q.melle.abs.scaled * current.direction + Tilt_angle.scaled 
+                 #+ station_name * current.direction 
+                 + tidal.phase * water.height.schoonaarde.scaled + O2.schellebelle.scaled + cond.schellebelle.scaled + Temperature.scaled + wind.v.liedekerke.scaled * wind.r.liedekerke + neerslag.zele.scaled + tidal.range.HWLW.schoonaarde + timedif.boat_smallest.scaled 
+                 #+ traveldirection.boat_smallest + shiptype.boat_smallest 
+                 + count_sum_boats.scaled)
+model=lm(form1,data=df,na.action=na.exclude)
+model <- stepAIC(model, trace = FALSE,direction="both")
+summary(model)
+plot(model)
+df$res=residuals(model)
+df$pred=predict(model)
+hist(df$res)
+plot(df$Average_noise,df$pred)
+plot(df$pred,df$res)
+df=df[order(df$timebin),]
+df=df[which(is.na(df$res)==FALSE),]
+for (i in unique(df$station_name)){
+  df.temp=df[which(df$station_name==i),]
+  df.temp=df.temp[order(df.temp$timebin),]
+  a<-acf(df.temp$res)
+  b<-ccf(df.temp$q.melle,df.temp$res)
+  c<-ccf(df.temp$signal.to.noise,df.temp$res)
+  d<-ccf(df.temp$water.height.schoonaarde,df.temp$res)
+  e<-ccf(df.temp$Tilt_angle,df.temp$res)
+  }
+
+plot(df$q.melle.abs.scaled,df$residuals)
+plot(df$Tilt_angle.scaled,df$residuals)
+plot(df$water.height.schoonaarde,df$residuals)
+df$fstation_name=as.factor(df$station_name)
+plot(df$fstation_name,df$residuals)
+plot(df$O2.schellebelle.scaled,df$residuals)
+plot(df$cond.schellebelle.scaled,df$residuals)
+plot(df$Temperature.scaled,df$residuals)
+plot(df$wind.v.liedekerke.scaled,df$residuals)
+plot(df$neerslag.zele.scaled,df$residuals)
+plot(df$hours,df$residuals)
+df$ftidal.phase<-as.factor(df$tidal.phase)
+plot(df$ftidal.phase,df$residuals)
+df$fstation_name<-as.factor(df$station_name)
+plot(df$fstation_name,df$residuals)
+plot(df$timedif.HWLW.mins_post,df$residuals)
+plot(df$timedif.HWLW.mins_prior,df$residuals)
+
+p <- df[which(df$station_name=="Rt1"),] %>%
+  ggplot( aes(x=timebin, y=Average_noise)) +
+    #geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("Det.Prob") + 
+    theme_ipsum() + geom_line(aes(x=timebin, y=q.melle.abs.scaled))
+
+# Turn it interactive with ggplotly
+p <- ggplotly(p)
+p
+```
+

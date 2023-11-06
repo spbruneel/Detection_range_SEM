@@ -1,0 +1,255 @@
+---
+title: "Power_DR"
+author: "Stijn Bruneel"
+date: "30-10-2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+RUN="NO"
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/data_agg_zeros_added_with_env.csv")
+df$timebin<-as.POSIXct(df$timebin, tz="UTC")
+df$hours=hour(df$timebin)
+```
+
+```{r}
+df=df[-which((df$water.height.schoonaarde.corrected<0 | df$water.height.schoonaarde.submitting.corrected<0)),]
+#df=df[-which((df$station_name=="Rt1" | df$station_name=="Rt2" | df$station_name_submitting=="Rt1" | df$station_name_submitting=="Rt2") & (df$water.height.schoonaarde.corrected<0 | df$water.height.schoonaarde.submitting.corrected<0)),]
+df=df[-which(df$Tilt_angle>90),]
+df=df[-which(df$Tilt_angle_submitting>90),]
+df=df[-which(df$station_name=="Rt6" | df$station_name_submitting=="Rt6"),]
+df=df[-which(df$distm50==0),]
+```
+
+```{r}
+df <- df %>%
+  dplyr::mutate(Tilt_angle.scaled = scale_vars(Tilt_angle),
+                Tilt_angle_submitting.scaled = scale_vars(Tilt_angle_submitting),
+                water.height.schoonaarde.scaled = scale_vars((water.height.schoonaarde.corrected)),
+                water.height.schoonaarde.submitting.scaled = scale_vars((water.height.schoonaarde.submitting.corrected)),
+                ebb.period.scaled = scale_vars(ebb.period),
+                flood.period.scaled = scale_vars(flood.period),
+                cond.schellebelle.scaled = scale_vars(cond.schellebelle),
+                q.melle.abs.scaled = scale_vars(q.melle.abs),
+                q.melle.magn.scaled = scale_vars(df$q.melle.magn),
+                Average_noise.scaled = scale_vars(Average_noise),
+                Average_noise_submitting.scaled = scale_vars(Average_noise_submitting),
+                Temperature.scaled=scale_vars(Temperature),
+                O2.schellebelle.scaled=scale_vars(O2.schellebelle),
+                distm.scaled=scale_vars(distm),
+                tidal.range.scaled=scale_vars(tidal.range.HWLW.schoonaarde),
+                perc.scaled=scale_vars(perc),
+                wind.v.scaled=scale_vars(wind.v.liedekerke),
+                wind.r.scaled=scale_vars(wind.r.liedekerke),
+                angle.wind.signal.cos.scaled=scale_vars(angle.wind.signal.cos),
+                angle.wind.signal.sin.scaled=scale_vars(angle.wind.signal.sin),
+                neerslag.scaled=scale_vars(neerslag.zele),
+                distance.to.border.scaled=scale_vars(distance.to.border),
+                turb.scaled=scale_vars(turb.schellebelle)
+  )
+```
+
+```{r}
+df$perc=df$perc/100
+df$angle.current.signal<-as.factor(df$angle.current.signal)
+df$current.direction<-as.factor(df$current.direction)
+df<-dummy_cols(df, select_columns = 'angle.current.signal')
+```
+
+```{r}
+#df$perc[which(df$perc>1)]=1
+```
+
+```{r}
+#Function to create random time interval of specified duration and within specified period
+`%!within%` <- Negate(`%within%`)
+random_time_interval<-function(duration_hour,start,stop){
+  random_start<-sample(seq(start,stop, by="hour"),1)
+  random_stop<-random_start+duration_hour*60*60
+  while (random_stop %!within%  interval(start,stop)) {
+    random_start<-sample(seq(start,stop, by="hour"),1)
+    random_stop<-random_start+duration_hour*60*60
+  }
+  period<-interval(random_start,random_stop)
+  return(period)
+}
+```
+
+```{r}
+#Function to select receivers with conditions
+select_receivers_random<-function(number,condition1){
+  first_try<-sample(unique(df$station_name),number)
+  df.power=df[which(df$station_name %in% first_try & df$station_name_submitting %in% first_try),]
+  while (all(df.power$distm50>condition1)){
+      first_try<-sample(unique(df$station_name),number)
+      df.power=df[which(df$station_name %in% first_try & df$station_name_submitting %in% first_try),]
+  }
+  return(first_try)
+}
+select_receivers_random(3,300)
+```
+```{r}
+durations_to_test=c(6,12,18,24,30,36,42,48,60,72,84,96,120,144,168,192,240,288,336,384)
+start=as.POSIXct("2020-03-01 12:00:00", tz="UTC")
+stop=as.POSIXct("2020-04-27 12:00:00", tz="UTC")
+nresamp=10000
+load("./models/GLM/glm_AIC_data_agg_3way_interaction.Rdata")
+glm.AIC_3way_interaction<-glm(update(glm.AIC_3way_interaction$formula,~ . +wind.v.scaled),data=df,family=binomial(link="logit"),na.action=na.exclude)
+
+if (RUN=="YES"){
+  
+  no_cores <- detectCores()
+  cl <- makeCluster(6)
+  registerDoParallel(cl)
+  
+  foreach (rec = 3:7,.packages = 'lubridate') %dopar% {
+    #receivers=select_receivers_random(rec,200)
+    receivers=unique(df$station_name)[1:rec]
+    for (a in durations_to_test){
+      store = as.data.frame(matrix(rep(NA,nresamp*length(glm.AIC_3way_interaction$coefficients)), ncol = 6, nrow = nresamp*length(glm.AIC_3way_interaction$coefficients)))
+      colnames(store)=c("rec_amount","DurationHOURS","Rep","Coeff","Est","P")
+      for (b in 1:nresamp){
+        random_time_interval_value<-random_time_interval(a,start,stop)
+        df_power=df[which(df$timebin %within% random_time_interval_value & df$station_name %in% receivers & df$station_name_submitting %in% receivers),]
+        while (min(table(df_power$RecRec))<0.90*max(table(df_power$RecRec))){
+          random_time_interval_value<-random_time_interval(a,start,stop)
+          df_power=df[which(df$timebin %within% random_time_interval_value & df$station_name %in% receivers & df$station_name_submitting %in% receivers),]
+          print("while-loop running")
+        }
+        glm.full_3way_interaction_power<-glm(glm.AIC_3way_interaction$formula,data=df_power,family=binomial(link="logit"),na.action=na.exclude)
+        x=summary(glm.full_3way_interaction_power)
+        row_selection=seq(from=1+(b-1)*length(glm.AIC_3way_interaction$coefficients),to=b*length(glm.AIC_3way_interaction$coefficients),by=1)
+        store[row_selection,1]=rec
+        store[row_selection,2]=a
+        store[row_selection,3]=b
+        store[row_selection,4]=rownames(x$coefficients)
+        store[row_selection,c(5:6)]=c(x$coefficients[,c(1,4)])
+      }
+      filename=paste("./data/internal/power_data_agg_fixed_receivers/power_",rec,"Rec_",a,"Hours_",nresamp,"_Rep.csv",sep="")
+      write.csv(store,filename)
+    }
+  }
+  stopCluster(cl)
+}
+```
+
+```{r}
+filelist<-list.files("./data/internal/power_data_agg_fixed_receivers/")
+for (i in 1:length(filelist)){
+  filename=paste("./data/internal/power_data_agg_fixed_receivers/",filelist[i],sep="")
+  model=read.csv(filename)
+  if (i == 1){
+    fullmodel=model
+  }
+  if (i > 1){
+    fullmodel=rbind(fullmodel,model)
+  }
+}
+
+fullmodel<-fullmodel[which(fullmodel$DurationHOURS<700),]
+```
+
+```{r}
+fullmodel_average<-fullmodel %>%
+    dplyr::group_by(rec_amount,DurationHOURS,Coeff) %>%
+    dplyr::summarize(n_group=n(),Cases_below_p=sum(P < 0.05,na.rm=TRUE),Power=Cases_below_p/n_group)
+```
+
+```{r}
+for (i in unique(fullmodel_average$Coeff)){
+  fullmodel_average.plot=fullmodel_average[which(fullmodel_average$Coeff==i),]
+  g<-ggplot(data = fullmodel_average.plot,aes(x=rec_amount,y=Power,group=as.factor(DurationHOURS)))
+  g<-g+geom_line(aes(colour=as.factor(DurationHOURS)),size=0.5)+geom_point(aes(colour=as.factor(DurationHOURS)))
+  g<-g+xlab("receivers")+ylab("Power")+ggtitle(i)
+  print(g)
+}
+```
+
+```{r}
+p=list()
+t=0
+titles=c("Intercept","Noise","Distance","Distance * Noise","Distance * Water height","Tilt angle (rec)","Tilt angle (sub)","Water height","Wind speed")
+fullmodel_average$Devices<-as.factor(fullmodel_average$rec_amount)
+for (i in unique(fullmodel_average$Coeff)){
+  t=t+1
+  fullmodel_average.plot=fullmodel_average[which(fullmodel_average$Coeff==i),]
+  g<-ggplot(data = fullmodel_average.plot,aes(x=DurationHOURS,y=Power,group=Devices))+labs(fill = "Number of receivers")
+  g<-g+geom_line(aes(colour=Devices),size=0.5)+geom_point(aes(colour=Devices))
+  g<-g+xlab("Duration (hours)")+ylab("Power")+ggtitle(titles[t])+theme_minimal()
+  g<-g+geom_hline(yintercept=0.8, linetype="dashed", color = "red")
+  print(g)
+  p[[t]]=g
+}
+gg<-ggarrange(p[[3]],p[[2]],p[[6]],p[[7]],p[[8]],p[[9]], ncol=2, nrow=3, common.legend = TRUE, legend="bottom")
+ggsave("./figures/Power_agg.pdf",width = 9,height=12,plot=gg)
+dev.off()
+```
+
+```{r}
+for (i in unique(fullmodel$Coeff)){
+  fullmodel.plot=fullmodel[which(fullmodel$Coeff==i & fullmodel$DurationHOURS>6),]
+  for (j in unique(fullmodel.plot$rec_amount)){
+    fullmodel.plot.rec=fullmodel.plot[which(fullmodel.plot$rec_amount==j),]
+    fullmodel.plot.rec$fDurationHOURS<-as.factor(fullmodel.plot.rec$DurationHOURS)
+    g<-ggplot(fullmodel.plot.rec, aes(x=fDurationHOURS, y=Est))
+    g<-g+geom_violin(trim=FALSE)
+    g<-g+xlab("Duration")+ylab("Est")+ggtitle(paste(i,j))
+    print(g)
+  }
+}
+```
+
+```{r}
+for (i in unique(fullmodel$Coeff)){
+  fullmodel.plot=fullmodel[which(fullmodel$Coeff==i & fullmodel$DurationHOURS>6),]
+  for (j in sort(unique(fullmodel.plot$DurationHOURS))){
+    fullmodel.plot.dur=fullmodel.plot[which(fullmodel.plot$DurationHOURS==j),]
+    fullmodel.plot.dur$frec_amount<-as.factor(fullmodel.plot.dur$rec_amount)
+    g<-ggplot(fullmodel.plot.dur, aes(x=frec_amount, y=Est))
+    g<-g+geom_violin(trim=FALSE)
+    g<-g+xlab("Receivers")+ylab("Est")+ggtitle(paste(i,j))
+    print(g)
+  }
+}
+```
+
+```{r}
+fullmodel_average.model<-fullmodel_average
+fullmodel_average.model$DurationHOURS.scaled = scale_vars(fullmodel_average.model$DurationHOURS)
+fullmodel_average.model$rec_amount.scaled = scale_vars(fullmodel_average.model$rec_amount)
+for (i in unique(fullmodel_average.model$Coeff)){
+  fullmodel_average.model.subset<-fullmodel_average.model[which(fullmodel_average.model$Coeff==i),]
+  model.power<-glm(Power~DurationHOURS.scaled+rec_amount.scaled,data=fullmodel_average.model.subset,family=binomial(link="logit"),na.action=na.exclude)
+  print(i)
+  print(summary(model.power))
+  print(model.power$coefficients[2]/model.power$coefficients[3])
+}
+```
+
+```{r}
+fullmodel_average.model$DurationDAYS<-fullmodel_average.model$DurationHOURS/24
+
+s <- fullmodel_average.model %>% 
+  group_by(rec_amount,Coeff) %>%
+  filter(abs(Power - 0.8) == min(abs(Power - 0.8)))
+  
+s <- s[,c("rec_amount","Coeff","DurationDAYS")]  
+
+s_wide <- spread(s, rec_amount, DurationDAYS)
+
+filename="./data/internal/power_threshold_reached.csv"
+write.csv(s_wide,filename)
+```
+

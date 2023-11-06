@@ -1,0 +1,166 @@
+---
+title: "Data_Exploration_DR_ZS_data_agg"
+author: "Stijn Bruneel"
+date: "6 februari 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/data_agg_zeros_added_with_env.csv")
+df$timebin<-as.POSIXct(df$timebin, tz="UTC")
+```
+
+```{r}
+load("./models/model_HIC.Rdata")
+df<-df[-which(df$tidal.phase=="kentering"),]
+df$q.schoonaarde<-predict(model_HIC,newdata=df)
+df$q.schoonaarde.abs<-abs(df$q.schoonaarde)
+df <- df %>%
+  dplyr::mutate(q.schoonaarde.abs.scaled = scale_vars(q.schoonaarde.abs)
+  )
+df$current.direction.schoonaarde<-NA
+df$current.direction.schoonaarde[which(df$q.schoonaarde<=0)]="upstream"
+df$current.direction.schoonaarde[which(df$q.schoonaarde>0)]="downstream"
+
+df$angle.current.signal.schoonaarde=NA
+df$angle.current.signal.schoonaarde[which(df$current.direction.schoonaarde!=df$signal.direction)]="180"
+df$angle.current.signal.schoonaarde[which(df$current.direction.schoonaarde==df$signal.direction)]="0"
+df$angle.current.signal.schoonaarde=as.factor(df$angle.current.signal.schoonaarde)
+
+```
+
+```{r}
+df_150m<-df[which(df$RecRec=="Rt1 Rt4"),]
+df_150m <- filter(df_150m,timebin>=as.POSIXct("2020-03-07 01:00:00",tz="UTC"),timebin<as.POSIXct("2020-03-21 01:00:00",tz="UTC"))
+#df_150m$perc=15*df_150m$perc
+
+p <- df_150m %>%
+    ggplot2::ggplot(aes(x=timebin, y=q.melle)) +
+    geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("Det.Prob") +
+    theme_ipsum() + geom_line(aes(x=timebin, y=Average_noise))
+
+p
+# Turn it interactive with ggplotly
+p <- plotly::ggplotly(p)
+p
+
+df_150m=df_150m[order(df_150m$timebin),]
+a<-ccf(df_150m$q.melle,df_150m$perc)
+b<-ccf(df_150m$q.schoonaarde,df_150m$perc)
+c<-ccf(df_150m$water.height.schoonaarde,df_150m$perc)
+d<-acf(df_150m$perc)
+```
+
+```{r}
+print(dotchart(df_150m$wind.v.liedekerke))
+print(dotchart(df_150m$q.melle))
+print(dotchart(df_150m$water.height.schoonaarde))
+print(dotchart(df_150m$cond.schellebelle))
+print(dotchart(df_150m$Tilt_angle))
+
+plot(df_150m$timebin,df_150m$temp.schellebelle)
+plot(df_150m$timebin,df_150m$cond.schellebelle)
+
+```
+
+```{r}
+dataselect<-df_150m%>%
+  dplyr::select(perc,Temperature,Average_noise,wind.v.liedekerke,wind.r.liedekerke,q.melle,water.height.schoonaarde,cond.schellebelle,Tilt_angle)
+pairs(dataselect)
+```
+
+```{r}
+dataselect<-df_150m%>%dplyr::select_if(is.numeric)
+x=as.data.frame(cor(dataselect))
+x[x<0.6]=NA
+
+dataselect<-df[which(df$distm50!=0),]%>%dplyr::select_if(is.numeric)
+x=as.data.frame(cor(dataselect))
+x[x<0.6]=NA
+```
+
+```{r}
+dataselect.KS=df
+dataselect.KS$angle.current.signal<-as.factor(dataselect.KS$angle.current.signal)
+
+dataselect.KS.x <- dataselect.KS$Tilt_angle[which(dataselect.KS$angle.current.signal==0)]
+dataselect.KS.y <- dataselect.KS$Tilt_angle[which(dataselect.KS$angle.current.signal==180)]
+
+ggplot(dataselect.KS, aes(x=angle.current.signal, y=Tilt_angle, fill=angle.current.signal)) + 
+    geom_boxplot()
+
+ks.test(dataselect.KS.x,dataselect.KS.y)
+
+```
+
+
+```{r}
+plot(df_150m$Tilt_angle,df_150m$q.melle)
+plot(df_150m$Tilt_angle,df_150m$water.height.schoonaarde)
+plot(df_150m$Tilt_angle,df_150m$perc)
+```
+
+```{r}
+df_150m$non_zero=NA
+df_150m$non_zero[which(df_150m$count_sum==0)]=0
+df_150m$non_zero[which(df_150m$count_sum!=0)]=1
+```
+
+```{r}
+wave.test.single<-Single_wavelet_analysis(data=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle")],response="non_zero")
+```
+
+```{r}
+wave.test.single<-Single_wavelet_analysis(data=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle","count_sum")],response="count_sum")
+```
+
+```{r}
+Double_wavelet_analysis(data=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle")],response=c("perc","q.melle"))
+```
+
+```{r}
+Double_wavelet_analysis(data=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle")],response=c("perc","water.height.schoonaarde"))
+```
+
+```{r}
+Double_wavelet_analysis(data=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle")],response=c("non_zero","water.height.schoonaarde"))
+```
+
+```{r}
+df_150m.wave=df_150m[,c("timebin","non_zero","perc","water.height.schoonaarde","q.melle.abs","q.melle","count_sum")]
+rownames(df_150m.wave)=df_150m.wave$timebin
+wave.test.coherence<-analyze.coherency(df_150m.wave,my.pair=c("count_sum","q.melle.abs"))
+```
+
+```{r}
+wave.test.single.reconstructed<-reconstruct(wave.test.coherence,sel.period=c(4.14,6.27,12.55,256))
+df_150m$perc_detrended=wave.test.single.reconstructed$series$count_sum-wave.test.single.reconstructed$series$count_sum.r
+#df_150m$perc_detrended=wave.test.single.reconstructed$series$perc.r
+ts.plot(df_150m$perc_detrended)
+ts.plot(wave.test.single.reconstructed$series$count_sum)
+df_150m$perc_detrended[which(df_150m$count_sum==0)]=0
+
+form6=as.formula(perc_detrended ~  q.melle.abs * current.direction + Tilt_angle + tidal.phase * water.height.schoonaarde + O2.schellebelle + cond.schellebelle + Temperature + wind.v.liedekerke * wind.r.liedekerke + neerslag.zele + tidal.range.HWLW.schoonaarde)
+model=lm(form6,data=df_150m)
+model <- stepAIC(model, trace = FALSE,direction="both")
+summary(model)
+df_150m$res=residuals(model)
+plot(model)
+df_150m=df_150m[order(df_150m$timebin),]
+a<-acf(df_150m$res)
+b<-ccf(df_150m$q.melle,df_150m$res)
+c<-ccf(df_150m$signal.to.noise,df_150m$res)
+d<-ccf(df_150m$water.height.schoonaarde,df_150m$res)
+e<-ccf(df_150m$Tilt_angle,df_150m$res)
+```

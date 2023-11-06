@@ -1,0 +1,292 @@
+,station_no,ts_id,ts_name,parametertype_name,stationparameter_name,station_id,station_latitude,station_longitude,station_name,dataprovider,dataowner,Portal_Bekken
+1,bnt03a-1074,3046929,bnt03aDUFF.W_r.KK.HWLW.tpk,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+2,bnt03a-1074,2803590,bnt03aDUFF.W_r,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+3,bnt03a-1074,2803817,bnt03aDUFF.W_t6.LW.base,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+4,bnt03a-1074,2803862,bnt03aDUFF.W_t6.1min.base,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+5,bnt03a-1074,2803822,bnt03aDUFF.W_t6.HWLW.base,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+6,bnt03a-1074,2803832,bnt03aDUFF.W_t6.10min.base,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+7,bnt03a-1074,2803812,bnt03aDUFF.W_t6.HW.base,h,W,312092,51.10913861,4.530166667,Duffel-sluis tij,MOW-HIC,HIC,Netebekken
+8,bnt07a-1066,3046968,bnt07aLIMO.W_r.KK.HWLW.tpk,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+9,bnt07a-1066,2810402,bnt07aLIMO.W_t6.10min.base,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+10,bnt07a-1066,2810392,bnt07aLIMO.W_t6.HWLW.base,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+11,bnt07a-1066,2810432,bnt07aLIMO.W_t6.1min.base,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+12,bnt07a-1066,2810387,bnt07aLIMO.W_t6.LW.base,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+13,bnt07a-1066,2810382,bnt07aLIMO.W_t6.HW.base,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+14,bnt07a-1066,2810160,bnt07aLIMO.W_r,h,W,312095,51.12635944,4.571893889,Lier Molbrug tij/Nete,MOW-HIC,HIC,Netebekken
+15,BS-RUP-1095,2541235,EMA_BOOMR.h.MonthMax,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+16,BS-RUP-1095,2541200,EMA_BOOMR.h.05,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+17,BS-RUP-1095,2541230,EMA_BOOMR.h.DayMin,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+18,BS-RUP-1095,2541239,EMA_BOOMR.h.MonthMin,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+19,BS-RUP-1095,2541243,EMA_BOOMR.h.YearMax,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+20,BS-RUP-1095,2541150,EMA_BOOMR.h.MonthMean,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+21,BS-RUP-1095,2541247,EMA_BOOMR.h.YearMin,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+22,BS-RUP-1095,2541225,EMA_BOOMR.h.DayMax,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+23,BS-RUP-1095,2541154,EMA_BOOMR.h.YearMean,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+24,BS-RUP-1095,2541145,EMA_BOOMR.h.DayMean,h,h,318020,51.0844137690576,4.360221382724,Boom Rupelbrug EMT/Rupel,MOW-HIC,ZEEK,Beneden-Scheldebekken
+25,BS-WIN-1095,2543868,EMA_WINTAM.h-sas.DayMin,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+26,BS-WIN-1095,2543788,EMA_WINTAM.h-sas.MonthMean,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+27,BS-WIN-1095,2541088,EMA_WINTAM.h-op.MonthMin,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+28,BS-WIN-1095,2544013,EMA_WINTAM.h-af.DayMax,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+29,BS-WIN-1095,2540999,EMA_WINTAM.h-op.MonthMean,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+30,BS-WIN-1095,2544023,EMA_WINTAM.h-af.MonthMax,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+31,BS-WIN-1095,2543877,EMA_WINTAM.h-sas.MonthMin,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+32,BS-WIN-1095,2543783,EMA_WINTAM.h-sas.DayMean,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+33,BS-WIN-1095,2541092,EMA_WINTAM.h-op.YearMax,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+34,BS-WIN-1095,2540994,EMA_WINTAM.h-op.DayMean,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+35,BS-WIN-1095,2543792,EMA_WINTAM.h-sas.YearMean,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+36,BS-WIN-1095,2543942,EMA_WINTAM.h-af.YearMean,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+37,BS-WIN-1095,2543938,EMA_WINTAM.h-af.MonthMean,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+38,BS-WIN-1095,2541096,EMA_WINTAM.h-op.YearMin,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+39,BS-WIN-1095,2541084,EMA_WINTAM.h-op.MonthMax,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+40,BS-WIN-1095,2541079,EMA_WINTAM.h-op.DayMin,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+41,BS-WIN-1095,2541074,EMA_WINTAM.h-op.DayMax,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+42,BS-WIN-1095,2541049,EMA_WINTAM.h-op.05,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+43,BS-WIN-1095,2543881,EMA_WINTAM.h-sas.YearMax,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+44,BS-WIN-1095,2544035,EMA_WINTAM.h-af.YearMin,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+45,BS-WIN-1095,2544031,EMA_WINTAM.h-af.YearMax,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+46,BS-WIN-1095,2544027,EMA_WINTAM.h-af.MonthMin,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+47,BS-WIN-1095,2541003,EMA_WINTAM.h-op.YearMean,h,h-op,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+48,BS-WIN-1095,2543885,EMA_WINTAM.h-sas.YearMin,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+49,BS-WIN-1095,2543873,EMA_WINTAM.h-sas.MonthMax,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+50,BS-WIN-1095,2543863,EMA_WINTAM.h-sas.DayMax,h,h-sas,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+51,BS-WIN-1095,2544018,EMA_WINTAM.h-af.DayMin,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+52,BS-WIN-1095,2543988,EMA_WINTAM.h-af.05,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+53,BS-WIN-1095,2543933,EMA_WINTAM.h-af.DayMean,h,h-af,311153,51.11781647,4.302417274,Wintam sluis EMT/Kl Brussel-Schelde,MOW-HIC,ZEEK,Beneden-Scheldebekken
+54,dij06a-1066,3046997,dij06aMECH.W_r.KK.HWLW.tpk,h,W,311992,51.03378278,4.467079167,Mechelen Benedensluis tij/Dijle,MOW-HIC,HIC,Dijlebekken
+55,dij06a-1066,3066519,dij06aMECH.W_t6.HWLW.base,h,W,311992,51.03378278,4.467079167,Mechelen Benedensluis tij/Dijle,MOW-HIC,HIC,Dijlebekken
+56,dij06a-1066,2807652,dij06aMECH.W_t6.10min.base,h,W,311992,51.03378278,4.467079167,Mechelen Benedensluis tij/Dijle,MOW-HIC,HIC,Dijlebekken
+57,dij06a-1066,2807682,dij06aMECH.W_t6.1min.base,h,W,311992,51.03378278,4.467079167,Mechelen Benedensluis tij/Dijle,MOW-HIC,HIC,Dijlebekken
+58,dij06a-1066,2807410,dij06aMECH.W_r,h,W,311992,51.03378278,4.467079167,Mechelen Benedensluis tij/Dijle,MOW-HIC,HIC,Dijlebekken
+59,dij07a-1066,3081899,dij07aMECH.W_t6.HWLW.base,h,W,311995,51.02364131,4.496889251,Mechelen Stuw Afwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+60,dij07a-1066,3047006,dij07aMECH.W_r.KK.HWLW.tpk,h,W,311995,51.02364131,4.496889251,Mechelen Stuw Afwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+61,dij07a-1066,2808103,dij07aMECH.W_r,h,W,311995,51.02364131,4.496889251,Mechelen Stuw Afwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+62,dij07a-1066,2808375,dij07aMECH.W_t6.1min.base,h,W,311995,51.02364131,4.496889251,Mechelen Stuw Afwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+63,dij08a-1066,2808426,dij08aMECH.W_r,h,W,311998,51.02338946,4.497031088,Mechelen Stuw Opwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+64,dij08a-1066,3047025,dij08aMECH.W_r.KK.HWLW.tpk,h,W,311998,51.02338946,4.497031088,Mechelen Stuw Opwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+65,dij08a-1066,2808698,dij08aMECH.W_t6.1min.base,h,W,311998,51.02338946,4.497031088,Mechelen Stuw Opwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+66,dij08a-1066,2808668,dij08aMECH.W_t6.10min.base,h,W,311998,51.02338946,4.497031088,Mechelen Stuw Opwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+67,dij08a-1066,2808737,dij08aMECH.W_t6.HWLW.base,h,W,311998,51.02338946,4.497031088,Mechelen Stuw Opwaarts tij/Dijle,MOW-HIC,HIC,Dijlebekken
+68,dur01a-1066,3066696,dur01aTIEL.W_t6.HWLW.base,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+69,dur01a-1066,3066693,dur01aTIEL.W_t6.LW.base,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+70,dur01a-1066,2811445,dur01aTIEL.W_t6.1min.base,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+71,dur01a-1066,2811415,dur01aTIEL.W_t6.10min.base,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+72,dur01a-1066,3047101,dur01aTIEL.W_r.KK.HWLW.tpk,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+73,dur01a-1066,2811173,dur01aTIEL.W_r,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+74,dur01a-1066,3066680,dur01aTIEL.W_t6.HW.base,h,W,312004,51.109585,4.174059167,Tielrode tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+75,dur05a-1066,3066702,dur05aWAMA.W_t6.HWLW.base,h,W,312007,51.10794028,4.067103611,Waasmunster Manta tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+76,dur05a-1066,2812414,dur05aWAMA.W_t6.1min.base,h,W,312007,51.10794028,4.067103611,Waasmunster Manta tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+77,dur05a-1066,2812384,dur05aWAMA.W_t6.10min.base,h,W,312007,51.10794028,4.067103611,Waasmunster Manta tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+78,dur05a-1066,2812142,dur05aWAMA.W_r,h,W,312007,51.10794028,4.067103611,Waasmunster Manta tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+79,dur05a-1066,3047120,dur05aWAMA.W_r.KK.HWLW.tpk,h,W,312007,51.10794028,4.067103611,Waasmunster Manta tij/Durme,MOW-HIC,HIC,Beneden-Scheldebekken
+80,gnt02a-1066,3047054,gnt02aKESS.W_r.KK.HWLW.tpk,h,W,312029,51.12721667,4.648963333,Kessel tij/Grote Nete,MOW-HIC,HIC,Netebekken
+81,gnt02a-1066,3066479,gnt02aKESS.W_t6.HWLW.base,h,W,312029,51.12721667,4.648963333,Kessel tij/Grote Nete,MOW-HIC,HIC,Netebekken
+82,gnt02a-1066,2806092,gnt02aKESS.W_t6.10min.base,h,W,312029,51.12721667,4.648963333,Kessel tij/Grote Nete,MOW-HIC,HIC,Netebekken
+83,gnt02a-1066,2805850,gnt02aKESS.W_r,h,W,312029,51.12721667,4.648963333,Kessel tij/Grote Nete,MOW-HIC,HIC,Netebekken
+84,gnt02a-1066,2806122,gnt02aKESS.W_t6.1min.base,h,W,312029,51.12721667,4.648963333,Kessel tij/Grote Nete,MOW-HIC,HIC,Netebekken
+85,knt01a-1066,2804252,knt01aEMBL.W_t6.1min.base,h,W,312067,51.15802917,4.608639167,Emblem tij/Kleine Nete,MOW-HIC,HIC,Netebekken
+86,knt01a-1066,3066379,knt01aEMBL.W_t6.HWLW.base,h,W,312067,51.15802917,4.608639167,Emblem tij/Kleine Nete,MOW-HIC,HIC,Netebekken
+87,knt01a-1066,2804222,knt01aEMBL.W_t6.10min.base,h,W,312067,51.15802917,4.608639167,Emblem tij/Kleine Nete,MOW-HIC,HIC,Netebekken
+88,knt01a-1066,3047129,knt01aEMBL.W_r.KK.HWLW.tpk,h,W,312067,51.15802917,4.608639167,Emblem tij/Kleine Nete,MOW-HIC,HIC,Netebekken
+89,OP005-1073,3284696,EMG_LOKPOM.h-op.01.O,h,h-op,318403,51.09935,4.01055833333333,Lokeren Pompstation EMT/Durme-Moervaart,MOW-HIC,WWGT,Beneden-Scheldebekken
+90,OP005-1073,3284853,EMG_LOKPOM.h-af.01.O,h,h-af,318403,51.09935,4.01055833333333,Lokeren Pompstation EMT/Durme-Moervaart,MOW-HIC,WWGT,Beneden-Scheldebekken
+91,OW006-1073,2470226,EMG_MERELB.h-hef2.YearMin,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+92,OW006-1073,2462427,EMG_MERELB.h-af.MonthMin,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+93,OW006-1073,2462590,EMG_MERELB.h-op.YearMin,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+94,OW006-1073,2480678,EMG_MERELB.h-hef1.DayMean,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+95,OW006-1073,2470214,EMG_MERELB.h-hef2.MonthMax,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+96,OW006-1073,2462431,EMG_MERELB.h-af.YearMax,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+97,OW006-1073,2462423,EMG_MERELB.h-af.MonthMax,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+98,OW006-1073,2462342,EMG_MERELB.h-af.YearMean,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+99,OW006-1073,2462578,EMG_MERELB.h-op.MonthMax,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+100,OW006-1073,2470133,EMG_MERELB.h-hef2.YearMean,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+101,OW006-1073,2470129,EMG_MERELB.h-hef2.MonthMean,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+102,OW006-1073,2470124,EMG_MERELB.h-hef2.DayMean,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+103,OW006-1073,2462418,EMG_MERELB.h-af.DayMin,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+104,OW006-1073,2462338,EMG_MERELB.h-af.MonthMean,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+105,OW006-1073,2462333,EMG_MERELB.h-af.DayMean,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+106,OW006-1073,2462543,EMG_MERELB.h-op.05,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+107,OW006-1073,2462497,EMG_MERELB.h-op.YearMean,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+108,OW006-1073,2480780,EMG_MERELB.h-hef1.YearMin,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+109,OW006-1073,2480683,EMG_MERELB.h-hef1.MonthMean,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+110,OW006-1073,2470209,EMG_MERELB.h-hef2.DayMin,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+111,OW006-1073,2462435,EMG_MERELB.h-af.YearMin,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+112,OW006-1073,2462573,EMG_MERELB.h-op.DayMin,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+113,OW006-1073,2480776,EMG_MERELB.h-hef1.YearMax,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+114,OW006-1073,2462413,EMG_MERELB.h-af.DayMax,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+115,OW006-1073,2462493,EMG_MERELB.h-op.MonthMean,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+116,OW006-1073,2462582,EMG_MERELB.h-op.MonthMin,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+117,OW006-1073,2480772,EMG_MERELB.h-hef1.MonthMin,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+118,OW006-1073,2480687,EMG_MERELB.h-hef1.YearMean,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+119,OW006-1073,2462388,EMG_MERELB.h-af.05,h,h-af,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+120,OW006-1073,2462586,EMG_MERELB.h-op.YearMax,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+121,OW006-1073,2480763,EMG_MERELB.h-hef1.DayMin,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+122,OW006-1073,2480758,EMG_MERELB.h-hef1.DayMax,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+123,OW006-1073,2470222,EMG_MERELB.h-hef2.YearMax,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+124,OW006-1073,2462568,EMG_MERELB.h-op.DayMax,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+125,OW006-1073,2462488,EMG_MERELB.h-op.DayMean,h,h-op,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+126,OW006-1073,2480768,EMG_MERELB.h-hef1.MonthMax,h,h-hef1,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+127,OW006-1073,2470218,EMG_MERELB.h-hef2.MonthMin,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+128,OW006-1073,2470204,EMG_MERELB.h-hef2.DayMax,h,h-hef2,311049,51.0080361642154,3.74962790681103,Merelbeke EMT/Bovenschelde,MOW-HIC,WWGT,Beneden-Scheldebekken
+129,OW007-1073,2482473,EMG_ZWIJ.h-op.DayMin,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+130,OW007-1073,2482388,EMG_ZWIJ.h-op.DayMean,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+131,OW007-1073,2482025,EMG_ZWIJ.h-hef2.YearMin,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+132,OW007-1073,2482443,EMG_ZWIJ.h-op.05,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+133,OW007-1073,2482628,EMG_ZWIJ.h-af.DayMin,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+134,OW007-1073,2482548,EMG_ZWIJ.h-af.MonthMean,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+135,OW007-1073,2482543,EMG_ZWIJ.h-af.DayMean,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+136,OW007-1073,2482013,EMG_ZWIJ.h-hef2.MonthMax,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+137,OW007-1073,2481932,EMG_ZWIJ.h-hef2.YearMean,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+138,OW007-1073,2482486,EMG_ZWIJ.h-op.YearMax,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+139,OW007-1073,2482478,EMG_ZWIJ.h-op.MonthMax,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+140,OW007-1073,2482468,EMG_ZWIJ.h-op.DayMax,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+141,OW007-1073,2482021,EMG_ZWIJ.h-hef2.YearMax,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+142,OW007-1073,2482017,EMG_ZWIJ.h-hef2.MonthMin,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+143,OW007-1073,2482397,EMG_ZWIJ.h-op.YearMean,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+144,OW007-1073,2482623,EMG_ZWIJ.h-af.DayMax,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+145,OW007-1073,2482003,EMG_ZWIJ.h-hef2.DayMax,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+146,OW007-1073,2481928,EMG_ZWIJ.h-hef2.MonthMean,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+147,OW007-1073,2482393,EMG_ZWIJ.h-op.MonthMean,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+148,OW007-1073,2482633,EMG_ZWIJ.h-af.MonthMax,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+149,OW007-1073,2482552,EMG_ZWIJ.h-af.YearMean,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+150,OW007-1073,2481862,EMG_ZWIJ.h-hef1.MonthMin,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+151,OW007-1073,2481853,EMG_ZWIJ.h-hef1.DayMin,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+152,OW007-1073,2481773,EMG_ZWIJ.h-hef1.MonthMean,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+153,OW007-1073,2481768,EMG_ZWIJ.h-hef1.DayMean,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+154,OW007-1073,2481923,EMG_ZWIJ.h-hef2.DayMean,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+155,OW007-1073,2482645,EMG_ZWIJ.h-af.YearMin,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+156,OW007-1073,2482641,EMG_ZWIJ.h-af.YearMax,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+157,OW007-1073,2482598,EMG_ZWIJ.h-af.05,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+158,OW007-1073,2481858,EMG_ZWIJ.h-hef1.MonthMax,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+159,OW007-1073,2481777,EMG_ZWIJ.h-hef1.YearMean,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+160,OW007-1073,2482637,EMG_ZWIJ.h-af.MonthMin,h,h-af,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+161,OW007-1073,2481870,EMG_ZWIJ.h-hef1.YearMin,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+162,OW007-1073,2482008,EMG_ZWIJ.h-hef2.DayMin,h,h-hef2,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+163,OW007-1073,2482490,EMG_ZWIJ.h-op.YearMin,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+164,OW007-1073,2482482,EMG_ZWIJ.h-op.MonthMin,h,h-op,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+165,OW007-1073,2481866,EMG_ZWIJ.h-hef1.YearMax,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+166,OW007-1073,2481848,EMG_ZWIJ.h-hef1.DayMax,h,h-hef1,311140,50.9935698843022,3.72442285930978,Zwijnaarde EMT/Bovenschelde,MOW-HIC,WWGT,Boven-Scheldebekken
+167,OW401-1073,2482876,EMG_DENDEM.h-hef1.DayMean,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+168,OW401-1073,2473671,EMG_DENDEM.h-af.YearMax,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+169,OW401-1073,2482808,EMG_DENDEM.h-op.YearMin,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+170,OW401-1073,2482796,EMG_DENDEM.h-op.MonthMax,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+171,OW401-1073,2482978,EMG_DENDEM.h-hef1.YearMin,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+172,OW401-1073,2482966,EMG_DENDEM.h-hef1.MonthMax,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+173,OW401-1073,2473667,EMG_DENDEM.h-af.MonthMin,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+174,OW401-1073,2473658,EMG_DENDEM.h-af.DayMin,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+175,OW401-1073,2482761,EMG_DENDEM.h-op.05,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+176,OW401-1073,2482712,EMG_DENDEM.h-op.YearMean,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+177,OW401-1073,2482708,EMG_DENDEM.h-op.MonthMean,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+178,OW401-1073,2482800,EMG_DENDEM.h-op.MonthMin,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+179,OW401-1073,2482881,EMG_DENDEM.h-hef1.MonthMean,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+180,OW401-1073,2473675,EMG_DENDEM.h-af.YearMin,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+181,OW401-1073,2482961,EMG_DENDEM.h-hef1.DayMin,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+182,OW401-1073,2482956,EMG_DENDEM.h-hef1.DayMax,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+183,OW401-1073,2473582,EMG_DENDEM.h-af.YearMean,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+184,OW401-1073,2482703,EMG_DENDEM.h-op.DayMean,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+185,OW401-1073,2482974,EMG_DENDEM.h-hef1.YearMax,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+186,OW401-1073,2482885,EMG_DENDEM.h-hef1.YearMean,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+187,OW401-1073,2473573,EMG_DENDEM.h-af.DayMean,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+188,OW401-1073,2473653,EMG_DENDEM.h-af.DayMax,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+189,OW401-1073,2473628,EMG_DENDEM.h-af.05,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+190,OW401-1073,2473578,EMG_DENDEM.h-af.MonthMean,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+191,OW401-1073,2473663,EMG_DENDEM.h-af.MonthMax,h,h-af,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+192,OW401-1073,2482804,EMG_DENDEM.h-op.YearMax,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+193,OW401-1073,2482791,EMG_DENDEM.h-op.DayMin,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+194,OW401-1073,2482786,EMG_DENDEM.h-op.DayMax,h,h-op,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+195,OW401-1073,2482970,EMG_DENDEM.h-hef1.MonthMin,h,h-hef1,310983,51.0435064604077,4.08478578047581,Dendermonde EMT/Dender,MOW-HIC,WWGT,Denderbekken
+196,rup03a-1066,3047176,rup03aWALE.W_r.KK.HWLW.tpk,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+197,rup03a-1066,3066711,rup03aWALE.W_t6.HWLW.base,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+198,rup03a-1066,2811496,rup03aWALE.W_r,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+199,rup03a-1066,3066708,rup03aWALE.W_t6.HW.base,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+200,rup03a-1066,2811738,rup03aWALE.W_t6.10min.base,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+201,rup03a-1066,3066724,rup03aWALE.W_t6.LW.base,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+202,rup03a-1066,2811768,rup03aWALE.W_t6.1min.base,h,W,312121,51.07367028,4.418808611,Walem tij/Rupel,MOW-HIC,HIC,Beneden-Scheldebekken
+203,zen01a-1066,2805352,zen01aHOMB.W_t6.10min.base,h,W,312201,51.01521639,4.448941944,Hombeek tij/Zenne,MOW-HIC,HIC,Dijlebekken
+204,zen01a-1066,3066464,zen01aHOMB.W_t6.HWLW.base,h,W,312201,51.01521639,4.448941944,Hombeek tij/Zenne,MOW-HIC,HIC,Dijlebekken
+205,zen01a-1066,2805382,zen01aHOMB.W_t6.1min.base,h,W,312201,51.01521639,4.448941944,Hombeek tij/Zenne,MOW-HIC,HIC,Dijlebekken
+206,zen01a-1066,3047148,zen01aHOMB.W_r.KK.HWLW.tpk,h,W,312201,51.01521639,4.448941944,Hombeek tij/Zenne,MOW-HIC,HIC,Dijlebekken
+207,zen01a-1066,2805110,zen01aHOMB.W_r,h,W,312201,51.01521639,4.448941944,Hombeek tij/Zenne,MOW-HIC,HIC,Dijlebekken
+208,zen02a-1066,3066757,zen02aZEMS.W_t6.HWLW.base,h,W,312204,50.99522222,4.4640775,Zemst tij/Zenne,MOW-HIC,HIC,Dijlebekken
+209,zen02a-1066,2813075,zen02aZEMS.W_t6.10min.base,h,W,312204,50.99522222,4.4640775,Zemst tij/Zenne,MOW-HIC,HIC,Dijlebekken
+210,zen02a-1066,3047195,zen02aZEMS.W_r.KK.HWLW.tpk,h,W,312204,50.99522222,4.4640775,Zemst tij/Zenne,MOW-HIC,HIC,Dijlebekken
+211,zen02a-1066,2813105,zen02aZEMS.W_t6.1min.base,h,W,312204,50.99522222,4.4640775,Zemst tij/Zenne,MOW-HIC,HIC,Dijlebekken
+212,zen02a-1066,2812833,zen02aZEMS.W_r,h,W,312204,50.99522222,4.4640775,Zemst tij/Zenne,MOW-HIC,HIC,Dijlebekken
+213,zes01a-1066,3047167,zes01aPROS.W_r.KK.HWLW.tpk,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+214,zes01a-1066,3066557,zes01aPROS.W_t6.HWLW.base,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+215,zes01a-1066,3066554,zes01aPROS.W_t6.LW.base,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+216,zes01a-1066,2809072,zes01aPROS.W_t6.1min.base,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+217,zes01a-1066,2809042,zes01aPROS.W_t6.10min.base,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+218,zes01a-1066,2808800,zes01aPROS.W_r,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+219,zes01a-1066,3066541,zes01aPROS.W_t6.HW.base,h,W,312144,51.34833167,4.237936667,Prosperpolder tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+220,zes10a-1066,2806492,zes10aLIEF.W_t6.1min.base,h,W,312150,51.29658639,4.286839722,Liefkenshoek tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+221,zes10a-1066,2806220,zes10aLIEF.W_r,h,W,312150,51.29658639,4.286839722,Liefkenshoek tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+222,zes10a-1066,2806452,zes10aLIEF.W_t6.HWLW.base,h,W,312150,51.29658639,4.286839722,Liefkenshoek tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+223,zes10a-1066,2806462,zes10aLIEF.W_t6.10min.base,h,W,312150,51.29658639,4.286839722,Liefkenshoek tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+224,zes10a-1066,3047242,zes10aLIEF.W_r.KK.HWLW.tpk,h,W,312150,51.29658639,4.286839722,Liefkenshoek tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+225,zes14a-1066,2805722,zes14aKALL.W_t6.10min.base,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+226,zes14a-1066,3047223,zes14aKALL.W_r.KK.HWLW.tpk,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+227,zes14a-1066,2805480,zes14aKALL.W_r,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+228,zes14a-1066,2805707,zes14aKALL.W_t6.LW.base,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+229,zes14a-1066,2805712,zes14aKALL.W_t6.HWLW.base,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+230,zes14a-1066,2805702,zes14aKALL.W_t6.HW.base,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+231,zes14a-1066,2805752,zes14aKALL.W_t6.1min.base,h,W,312156,51.26543972,4.296636389,Kallosluis tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+232,zes21a-1066,3026839,zes21aANTW.W_r.KK.HWLW.tpk,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+233,zes21a-1066,2799302,zes21aANTW.W_t6.1min.base,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+234,zes21a-1066,2799262,zes21aANTW.W_t6.HWLW.base,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+235,zes21a-1066,2799272,zes21aANTW.W_t6.10min.base,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+236,zes21a-1066,2907786,zes21aANTW.W_t6.LW.base,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+237,zes21a-1066,2907783,zes21aANTW.W_t6.HW.base,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+238,zes21a-1066,2799030,zes21aANTW.W_r,h,W,312159,51.22882139,4.397031389,Antwerpen tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+239,zes28a-1066,3047214,zes28aHEMI.W_r.KK.HWLW.tpk,h,W,312162,51.14297806,4.328803333,Hemiksem tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+240,zes28a-1066,2804740,zes28aHEMI.W_r,h,W,312162,51.14297806,4.328803333,Hemiksem tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+241,zes28a-1066,2804972,zes28aHEMI.W_t6.HWLW.base,h,W,312162,51.14297806,4.328803333,Hemiksem tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+242,zes28a-1066,2805012,zes28aHEMI.W_t6.1min.base,h,W,312162,51.14297806,4.328803333,Hemiksem tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+243,zes28a-1066,2804982,zes28aHEMI.W_t6.10min.base,h,W,312162,51.14297806,4.328803333,Hemiksem tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+244,zes36a-1066,3066661,zes36aTEMS.W_t6.HW.base,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+245,zes36a-1066,2810850,zes36aTEMS.W_r,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+246,zes36a-1066,3047270,zes36aTEMS.W_r.KK.HWLW.tpk,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+247,zes36a-1066,3066674,zes36aTEMS.W_t6.LW.base,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+248,zes36a-1066,2811122,zes36aTEMS.W_t6.1min.base,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+249,zes36a-1066,2811092,zes36aTEMS.W_t6.10min.base,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+250,zes36a-1066,3066677,zes36aTEMS.W_t6.HWLW.base,h,W,312168,51.12280913,4.218672931,Temse tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+251,zes42a-1066,3066658,zes42aSTAM.W_t6.HWLW.base,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+252,zes42a-1066,2810041,zes42aSTAM.W_t6.1min.base,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+253,zes42a-1066,2810011,zes42aSTAM.W_t6.10min.base,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+254,zes42a-1066,3066655,zes42aSTAM.W_t6.LW.base,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+255,zes42a-1066,2809769,zes42aSTAM.W_r,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+256,zes42a-1066,3066652,zes42aSTAM.W_t6.HW.base,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+257,zes42a-1066,3047251,zes42aSTAM.W_r.KK.HWLW.tpk,h,W,312171,51.05264028,4.197213889,Sint-Amands tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+258,zes47a-1066,3047308,zes47aDEND.W_r.KK.HWLW.tpk,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+259,zes47a-1066,2813512,zes47aDEND.W_t6.HW.base,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+260,zes47a-1066,2813522,zes47aDEND.W_t6.HWLW.base,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+261,zes47a-1066,2813517,zes47aDEND.W_t6.LW.base,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+262,zes47a-1066,2813290,zes47aDEND.W_r,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+263,zes47a-1066,2813562,zes47aDEND.W_t6.1min.base,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+264,zes47a-1066,2813532,zes47aDEND.W_t6.10min.base,h,W,312174,51.03455757,4.103856105,Dendermonde tij/Zeeschelde,MOW-HIC,HIC,Denderbekken
+265,zes49a-1066,3047355,zes49aSCHO.W_r.KK.HWLW.tpk,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+266,zes49a-1066,2809718,zes49aSCHO.W_t6.1min.base,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+267,zes49a-1066,2809688,zes49aSCHO.W_t6.10min.base,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+268,zes49a-1066,3066623,zes49aSCHO.W_t6.HW.base,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+269,zes49a-1066,3066626,zes49aSCHO.W_t6.HWLW.base,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+270,zes49a-1066,3066629,zes49aSCHO.W_t6.LW.base,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+271,zes49a-1066,2809446,zes49aSCHO.W_r,h,W,312177,51.00466917,4.007586389,Schoonaarde tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+272,zes55a-1066,3066748,zes55aWETT.W_t6.HWLW.base,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+273,zes55a-1066,3066742,zes55aWETT.W_t6.HW.base,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+274,zes55a-1066,3047374,zes55aWETT.W_r.KK.HWLW.tpk,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+275,zes55a-1066,2812061,zes55aWETT.W_t6.10min.base,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+276,zes55a-1066,3066745,zes55aWETT.W_t6.LW.base,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+277,zes55a-1066,2811819,zes55aWETT.W_r,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+278,zes55a-1066,2812091,zes55aWETT.W_t6.1min.base,h,W,312180,51.00844083,3.881585556,Wetteren tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+279,zes57a-1074,2808012,zes57aMELL.W_t6.HWLW.base,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+280,zes57a-1074,2808007,zes57aMELL.W_t6.LW.base,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+281,zes57a-1074,2808022,zes57aMELL.W_t6.10min.base,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+282,zes57a-1074,3047336,zes57aMELL.W_r.KK.HWLW.tpk,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+283,zes57a-1074,2808052,zes57aMELL.W_t6.1min.base,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+284,zes57a-1074,2808002,zes57aMELL.W_t6.HW.base,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+285,zes57a-1074,2807780,zes57aMELL.W_r,h,W,312183,51.00432528,3.805347222,Melle tij,MOW-HIC,HIC,Beneden-Scheldebekken
+286,zes58a-1066,3047327,zes58aGENT.W_r.KK.HWLW.tpk,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+287,zes58a-1066,2804642,zes58aGENT.W_t6.1min.base,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+288,zes58a-1066,3066398,zes58aGENT.W_t6.HWLW.base,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+289,zes58a-1066,2804607,zes58aGENT.W_t6.5min.base,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+290,zes58a-1066,2804370,zes58aGENT.W_r,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken
+291,zes58a-1066,2804612,zes58aGENT.W_t6.10min.base,h,W,312186,51.04705611,3.747220833,Gentbrugge tij/Zeeschelde,MOW-HIC,HIC,Beneden-Scheldebekken

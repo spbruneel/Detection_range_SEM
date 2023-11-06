@@ -1,0 +1,259 @@
+---
+title: "Power_DR"
+author: "Stijn Bruneel"
+date: "30-10-2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+RUN="NO"
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/databin_zeros_added_with_env.csv")
+```
+
+```{r}
+df$date_time_0m<-as.POSIXct(df$date_time_0m, tz="UTC")
+```
+
+```{r eval=FALSE}
+df.subset <- filter(df,date_time_0m>=as.POSIXct("2020-03-07 01:00:00",tz="UTC"),date_time_0m<as.POSIXct("2020-03-14 01:00:00",tz="UTC"))
+write.csv(df.subset,"./data/internal/telemetry/databin_zeros_added_with_env_subset.csv")
+```
+
+```{r eval=FALSE}
+df<-read.csv("./data/internal/telemetry/databin_zeros_added_with_env_subset.csv")
+```
+
+```{r}
+df$date_time_0m<-as.POSIXct(df$date_time_0m, tz="UTC")
+df$counts=as.factor(df$counts)
+df$angle.current.signal<-as.factor(df$angle.current.signal)
+df$timebin=df$date_time_0m
+```
+
+```{r}
+df$counts=as.factor(df$counts)
+df$angle.current.signal<-as.factor(df$angle.current.signal)
+df$timebin=df$date_time_0m
+```
+
+```{r}
+df=df[-which(df$station_name=="Rt6" | df$station_name_submitting=="Rt6"),]
+df=df[-which(df$distm50==0),]
+```
+
+```{r}
+foldername="./models/loess_noise_models/"
+df$Average_noise_receiving_loess=NA
+df$Average_noise_submitting_loess=NA
+filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    df$Average_noise_receiving_loess[which(df$station_name==substr(filename, 51, 53))] = predict(loessMod10_noise,newdata=(df$timebin[which(df$station_name==substr(filename, 51, 53))]))
+    df$Average_noise_submitting_loess[which(df$station_name_submitting==substr(filename, 51, 53))] = predict(loessMod10_noise,newdata=(df$timebin[which(df$station_name_submitting==substr(filename, 51, 53))]))
+
+  }
+
+foldername="./models/loess_tilt_angle_models/"
+df$Tilt_angle_receiving_loess=NA
+df$Tilt_angle_submitting_loess=NA
+filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    df$Tilt_angle_receiving_loess[which(df$station_name==substr(filename, 61, 63))] = predict(loessMod10_tilt_angle,newdata=(df$timebin[which(df$station_name==substr(filename, 61, 63))]))
+    df$Tilt_angle_submitting_loess[which(df$station_name_submitting==substr(filename, 61, 63))] = predict(loessMod10_tilt_angle,newdata=(df$timebin[which(df$station_name_submitting==substr(filename, 61, 63))]))
+  }
+```
+
+```{r}
+if(any(is.na(df$Average_noise_receiving_loess))==TRUE){
+  df=df[-which(is.na((df$Average_noise_receiving_loess)==TRUE)),]
+}
+```
+
+```{r}
+df <- df %>%
+  dplyr::mutate(Tilt_angle_receiving.scaled = scale_vars(Tilt_angle_receiving_loess),
+                Tilt_angle_submitting.scaled = scale_vars(Tilt_angle_submitting_loess),
+                water.height.schoonaarde.scaled = scale_vars(water.height.schoonaarde),
+                cond.schellebelle.scaled = scale_vars(cond.schellebelle),
+                q.melle.abs.scaled = scale_vars(q.melle.abs),
+                Average_noise_receiving.scaled = scale_vars(Average_noise_receiving_loess),
+                Average_noise_submitting.scaled = scale_vars(Average_noise_submitting_loess),
+                Temperature.scaled=scale_vars(temp.schellebelle),
+                O2.schellebelle.scaled=scale_vars(O2.schellebelle),
+                distm.scaled=scale_vars(distm),
+                tidal.range.scaled=scale_vars(tidal.range.HWLW.schoonaarde),
+                wind.v.scaled=scale_vars(wind.v.liedekerke),
+                wind.r.scaled=scale_vars(wind.r.liedekerke),
+                angle.wind.signal.cos.scaled=scale_vars(angle.wind.signal.cos),
+                angle.wind.signal.sin.scaled=scale_vars(angle.wind.signal.sin),
+                neerslag.scaled=scale_vars(neerslag.zele.5min),
+                turb.scaled=scale_vars(turb.schellebelle)
+  )
+```
+
+```{r}
+df$ncounts=NA
+df$ncounts[which(df$counts=="0")]=0
+df$ncounts[which(df$counts=="1")]=1
+```
+
+```{r}
+x=as.data.frame(t(table(df$station_name_submitting)))
+df$weight=NA
+for (i in unique(df$station_name_submitting)){
+  df$weight[which(df$station_name_submitting==i)]=(1/x$Freq[which(x$Var2==i)])*1000000
+}
+```
+
+```{r}
+#Function to create random time interval of specified duration and within specified period
+`%!within%` <- Negate(`%within%`)
+random_time_interval<-function(duration_hour,start,stop){
+  random_start<-sample(seq(start,stop, by="hour"),1)
+  random_stop<-random_start+duration_hour*60*60
+  while (random_stop %!within%  interval(start,stop)) {
+    random_start<-sample(seq(start,stop, by="hour"),1)
+    random_stop<-random_start+duration_hour*60*60
+  }
+  period<-interval(random_start,random_stop)
+  return(period)
+}
+```
+
+```{r}
+#Function to select receivers with conditions
+select_receivers_random<-function(number,condition1){
+  first_try<-sample(unique(df$station_name),number)
+  df.power=df[which(df$station_name %in% first_try & df$station_name_submitting %in% first_try),]
+  while (all(df.power$distm50>condition1)){
+      first_try<-sample(unique(df$station_name),number)
+      df.power=df[which(df$station_name %in% first_try & df$station_name_submitting %in% first_try),]
+  }
+  return(first_try)
+}
+select_receivers_random(3,300)
+```
+
+
+```{r}
+start_time<-Sys.time()
+#
+durations_to_test=c(6,12,18,24,30,36,42,48,60,72,84,96,120,144,168,192,240,288,336,384)
+start=as.POSIXct("2020-03-01 12:00:00", tz="UTC")
+stop=as.POSIXct("2020-04-27 12:00:00", tz="UTC")
+nresamp=1000
+load("./models/GLM/glm_AIC_databin_interaction.Rdata")
+if (RUN=="YES"){
+  for (rec in 6){
+    #receivers=select_receivers_random(rec,300)
+    receivers=unique(df$station_name)[1:rec]
+    for (a in durations_to_test){
+      store = as.data.frame(matrix(rep(NA,nresamp*length(glm.AIC_interaction$coefficients)), ncol = 6, nrow = nresamp*length(glm.AIC_interaction$coefficients)))
+      colnames(store)=c("rec_amount","DurationHOURS","Rep","Coeff","Est","P")
+      for (b in 1:nresamp){
+        random_time_interval_value<-random_time_interval(a,start,stop)
+        df_power=df[which(df$timebin %within% random_time_interval_value & df$station_name %in% receivers & df$station_name_submitting %in% receivers),]
+        glm.full_3way_interaction_power<-glm(glm.AIC_interaction$formula,data=df_power,family=binomial(link="logit"),na.action=na.exclude,weights = df_power$weight)
+        x=summary(glm.full_3way_interaction_power)
+        row_selection=seq(from=1+(b-1)*length(rownames(x$coefficients)),to=b*length(rownames(x$coefficients)),by=1)
+        store[row_selection,1]=rec
+        store[row_selection,2]=a
+        store[row_selection,3]=b
+        store[row_selection,4]=rownames(x$coefficients) #did not work here because it does not include the NAs when we are dealing with a non-converging model
+        store[row_selection,c(5:6)]=c(x$coefficients[,c(1,4)])
+      }
+      filename=paste("./data/internal/power_databin_fixed_receivers/power_",rec,"Rec_",a,"Hours_",nresamp,"_Rep.csv",sep="")
+      write.csv(store,filename)
+    }
+  }
+}
+
+end_time<-Sys.time()
+
+run_time<-end_time-start_time
+```
+
+```{r}
+filelist<-list.files("./data/internal/power_databin_fixed_receivers/")
+for (i in 1:length(filelist)){
+  filename=paste("./data/internal/power_databin_fixed_receivers/",filelist[i],sep="")
+  model=read.csv(filename)
+  if (i == 1){
+    fullmodel=model
+  }
+  if (i > 1){
+    fullmodel=rbind(fullmodel,model)
+  }
+}
+
+fullmodel<-fullmodel[-which(is.na(fullmodel$Coeff)==TRUE),]
+```
+
+```{r}
+fullmodel_average<-fullmodel %>%
+    dplyr::group_by(rec_amount,DurationHOURS,Coeff) %>%
+    dplyr::summarize(n_group=n(),Cases_below_p=sum(P < 0.05,na.rm=TRUE),Power=Cases_below_p/n_group)
+```
+
+```{r}
+for (i in unique(fullmodel_average$Coeff)){
+  fullmodel_average.plot=fullmodel_average[which(fullmodel_average$Coeff==i),]
+  g<-ggplot(data = fullmodel_average.plot,aes(x=rec_amount,y=Power,group=as.factor(DurationHOURS)))
+  g<-g+geom_line(aes(colour=as.factor(DurationHOURS)),size=0.5)+geom_point(aes(colour=as.factor(DurationHOURS)))
+  g<-g+xlab("receivers")+ylab("Power")+ggtitle(i)
+  print(g)
+}
+```
+
+```{r}
+for (i in unique(fullmodel_average$Coeff)){
+  fullmodel_average.plot=fullmodel_average[which(fullmodel_average$Coeff==i),]
+  g<-ggplot(data = fullmodel_average.plot,aes(x=DurationHOURS,y=Power,group=as.factor(rec_amount)))
+  g<-g+geom_line(aes(colour=as.factor(rec_amount)),size=0.5)+geom_point(aes(colour=as.factor(rec_amount)))
+  g<-g+xlab("duration")+ylab("Power")+ggtitle(i)
+  print(g)
+}
+```
+
+```{r}
+for (i in unique(fullmodel$Coeff)){
+  fullmodel.plot=fullmodel[which(fullmodel$Coeff==i & fullmodel$DurationHOURS>6),]
+  for (j in unique(fullmodel.plot$rec_amount)){
+    fullmodel.plot.rec=fullmodel.plot[which(fullmodel.plot$rec_amount==j),]
+    fullmodel.plot.rec$fDurationHOURS<-as.factor(fullmodel.plot.rec$DurationHOURS)
+    g<-ggplot(fullmodel.plot.rec, aes(x=fDurationHOURS, y=Est))
+    g<-g+geom_violin(trim=FALSE)
+    g<-g+xlab("Duration")+ylab("Est")+ggtitle(paste(i,j))
+    print(g)
+  }
+}
+```
+
+```{r, time_it = TRUE}
+for (i in unique(fullmodel$Coeff)){
+  fullmodel.plot=fullmodel[which(fullmodel$Coeff==i & fullmodel$DurationHOURS>6),]
+  for (j in sort(unique(fullmodel.plot$DurationHOURS))){
+    fullmodel.plot.dur=fullmodel.plot[which(fullmodel.plot$DurationHOURS==j),]
+    fullmodel.plot.dur$frec_amount<-as.factor(fullmodel.plot.dur$rec_amount)
+    g<-ggplot(fullmodel.plot.dur, aes(x=frec_amount, y=Est))
+    g<-g+geom_violin(trim=FALSE)
+    g<-g+xlab("Receivers")+ylab("Est")+ggtitle(paste(i,j))
+    print(g)
+  }
+}
+```

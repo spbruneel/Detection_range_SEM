@@ -1,0 +1,50 @@
+---
+title: "Data_Exploration_DR_ZS_databin"
+author: "Stijn Bruneel"
+date: "6 februari 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/databin_zeros_added_with_env.csv")
+```
+
+```{r}
+#Are there stations that are skipped by the signal?
+df.jump<-df
+df.jump$date_time_0m_station_name_submitting<-paste(df.jump$date_time_0m,df.jump$station_name_submitting,sep="_")
+df.jump.wide<-spread(df.jump[,c("station_name_submitting","date_time_0m_station_name_submitting","station_name","counts")],station_name,counts)
+write.csv(df.jump.wide,"./data/internal/telemetry/df.jump.wide.csv")
+df.jump.wide.t<-t(df.jump.wide[,c(3:10)])
+colnames(df.jump.wide.t)=df.jump.wide$station_name_submitting
+write.csv(df.jump.wide.t,"./data/internal/telemetry/df.jump.wide.t.csv")
+for (i in 1:ncol(df.jump.wide.t)){
+  first=getFirst(which(df.jump.wide.t[,i]==1))
+  last=getLast(which(df.jump.wide.t[,i]==1))
+  keep=first:last
+  df.jump.wide.t[-keep,i]=NA
+}
+write.csv(df.jump.wide.t,"./data/internal/telemetry/df.jump.wide.t.NA.csv")
+df.jump.wide<-t(df.jump.wide.t)
+rownames(df.jump.wide)=colnames(df.jump.wide.t)
+df.jump.wide.zero<-df.jump.wide[apply(df.jump.wide, 1, function(row) any(row ==0,na.rm=TRUE)), ]
+df.jump.wide.zero<-as.data.frame(df.jump.wide.zero)
+df.jump.wide.zero<-rownames_to_column(df.jump.wide.zero,var="station_submitting") %>% as.tibble()
+df.jump.wide.zero$station_submitting<-substr(df.jump.wide.zero$station_submitting,start=1,stop=3)
+```
+
+```{r}
+#Create performance variable
+```
+
+
+

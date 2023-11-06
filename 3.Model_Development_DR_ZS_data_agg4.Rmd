@@ -1,0 +1,678 @@
+---
+title: "Model_Development_DR_ZS_data_agg"
+author: "Stijn Bruneel"
+date: "4 februari 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+RUN="NO"
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/data_agg_zeros_added_with_env.csv")
+df$timebin<-as.POSIXct(df$timebin, tz="UTC", format="%Y-%m-%d %H:%M:%OS")
+df$hours=hour(df$timebin)
+
+df$depth.class<-NA
+df$depth.class[which(df$water.height.schoonaarde.corrected < 0)]="Dry"
+df$depth.class[which(df$water.height.schoonaarde.corrected >= 0)]="Wet"
+ggplot(df,aes(x=depth.class,y=Tilt_angle,fill=station_name))+geom_boxplot()
+ggplot(df,aes(x=depth.class,y=perc,fill=station_name))+geom_boxplot()
+table(df$station_name,df$depth.class)
+
+df$depth.class.submitting<-NA
+df$depth.class.submitting[which(df$water.height.schoonaarde.submitting.corrected < 0)]="Dry"
+df$depth.class.submitting[which(df$water.height.schoonaarde.submitting.corrected >= 0)]="Wet"
+ggplot(df,aes(x=depth.class.submitting,y=Tilt_angle_submitting,fill=station_name_submitting))+geom_boxplot()
+ggplot(df,aes(x=depth.class.submitting,y=perc,fill=station_name_submitting))+geom_boxplot()
+table(df$station_name_submitting,df$depth.class.submitting)
+
+```
+
+```{r}
+df=df[-which(df$station_name=="Rt6" | df$station_name_submitting=="Rt6"),]
+df=df[-which(df$distm50==0),]
+
+#df=df[-which((df$station_name=="Rt1" | df$station_name=="Rt2" | df$station_name_submitting=="Rt1" | df$station_name_submitting=="Rt2") & (df$water.height.schoonaarde.corrected<0 | df$water.height.schoonaarde.submitting.corrected<0)),]
+df=df[-which((df$water.height.schoonaarde.corrected<0 | df$water.height.schoonaarde.submitting.corrected<0)),]
+
+table(df$station_name,df$depth.class)
+table(df$station_name_submitting,df$depth.class.submitting)
+
+df=df[-which(df$Tilt_angle>90),]
+df=df[-which(df$Tilt_angle_submitting>90),]
+```
+
+```{r}
+df <- df %>%
+  dplyr::mutate(Tilt_angle.scaled = scale_vars(Tilt_angle),
+                Tilt_angle_submitting.scaled = scale_vars(Tilt_angle_submitting),
+                water.height.schoonaarde.scaled = scale_vars((water.height.schoonaarde.corrected)),
+                water.height.schoonaarde.submitting.scaled = scale_vars((water.height.schoonaarde.submitting.corrected)),
+                ebb.period.scaled = scale_vars(ebb.period),
+                flood.period.scaled = scale_vars(flood.period),
+                cond.schellebelle.scaled = scale_vars(cond.schellebelle),
+                q.melle.abs.scaled = scale_vars(q.melle.abs),
+                q.melle.magn.scaled = scale_vars(df$q.melle.magn),
+                Average_noise.scaled = scale_vars(Average_noise),
+                Average_noise_submitting.scaled = scale_vars(Average_noise_submitting),
+                Temperature.scaled=scale_vars(Temperature),
+                O2.schellebelle.scaled=scale_vars(O2.schellebelle),
+                distm.scaled=scale_vars(distm),
+                tidal.range.scaled=scale_vars(tidal.range.HWLW.schoonaarde),
+                perc.scaled=scale_vars(perc),
+                wind.v.scaled=scale_vars(wind.v.liedekerke),
+                wind.r.scaled=scale_vars(wind.r.liedekerke),
+                angle.wind.signal.cos.scaled=scale_vars(angle.wind.signal.cos),
+                angle.wind.signal.sin.scaled=scale_vars(angle.wind.signal.sin),
+                neerslag.scaled=scale_vars(neerslag.zele),
+                distance.to.border.scaled=scale_vars(distance.to.border),
+                turb.scaled=scale_vars(turb.schellebelle),
+                q.h=scale_vars(q.melle.abs/water.height.schoonaarde)
+  )
+```
+
+```{r}
+df.model<-df
+df.model$perc=df.model$perc/100
+df.model$angle.current.signal<-as.factor(df.model$angle.current.signal)
+df.model$current.direction<-as.factor(df.model$current.direction)
+
+df.model <- dummy_cols(df.model, select_columns = 'station_name')
+df.model <- dummy_cols(df.model, select_columns = 'angle.current.signal')
+df.model <- dummy_cols(df.model, select_columns = 'tidal.phase')
+df.model <- dummy_cols(df.model, select_columns = 'current.direction')
+
+# s <- df.model.for.noise.and.tilt.models%>%
+#     dplyr::group_by(station_name)%>%
+#     dplyr::summarise(bath=sd(water.height.schoonaarde.corrected))
+```
+
+```{r}
+df.model.for.noise.and.tilt.models<-df.model[which(df.model$distm50==0),]
+#df.model$perc[which(df.model$perc>1)]=1
+```
+
+```{r}
+ggplot(df.model,aes(x=depth.class,y=Tilt_angle,fill=station_name))+geom_boxplot()
+ggplot(df.model,aes(x=depth.class,y=perc,fill=station_name))+geom_boxplot()
+
+ggplot(df.model,aes(x=depth.class.submitting,y=Tilt_angle_submitting,fill=station_name_submitting))+geom_boxplot()
+ggplot(df.model,aes(x=depth.class.submitting,y=perc,fill=station_name_submitting))+geom_boxplot()
+```
+
+
+```{r}
+form.glm.empty=as.formula(perc ~ 1
+                      )
+
+form.glm.full_3way_interaction=as.formula(perc ~ (distm.scaled
+                      + Average_noise.scaled
+                      + water.height.schoonaarde.scaled + water.height.schoonaarde.submitting.scaled
+                      + Tilt_angle.scaled * angle.current.signal
+                      + Tilt_angle_submitting.scaled * angle.current.signal
+                      + cond.schellebelle.scaled
+                      + wind.v.scaled * angle.wind.signal.sin.scaled
+                      + wind.v.scaled * angle.wind.signal.cos.scaled
+                      + neerslag.scaled 
+                      ) * distm.scaled
+                      )
+```
+
+```{r}
+#Run and safe models or load models
+glm.empty<-glm(form.glm.empty,data=df.model,family=binomial(link="logit"),na.action=na.exclude)
+
+if (RUN=="YES"){
+  
+  glm.full_3way_interaction<-glm(form.glm.full_3way_interaction,data=df.model,family=binomial(link="logit"),na.action=na.exclude)
+  save(glm.full_3way_interaction,file="./models/GLM/glm_full_data_agg_3way_interaction.Rdata")
+  glm.AIC_3way_interaction <- stepAIC(glm.empty,trace = TRUE,direction="forward",scope=list(upper=glm.full_3way_interaction,lower=glm.empty),k=log(nrow(df.model)))
+  save(glm.AIC_3way_interaction,file="./models/GLM/glm_AIC_data_agg_3way_interaction.Rdata")
+} 
+if (RUN=="NO"){
+  
+  load("./models/GLM/glm_AIC_data_agg_3way_interaction.Rdata")
+}
+```
+
+```{r}
+summary(glm.AIC_3way_interaction)
+
+car::vif(glm.AIC_3way_interaction)
+
+bin.model=glm.AIC_3way_interaction
+
+model=bin.model
+
+mCFaddenR2<-1-(logLik(bin.model)/logLik(glm.empty))#
+mCFaddenR2
+```
+
+```{r eval=FALSE}
+glmer.all.intercepts <- glmer(perc ~ Average_noise.scaled*distm.scaled
+                      + water.height.schoonaarde.submitting.scaled*distm.scaled
+                      + Tilt_angle.scaled 
+                      + Tilt_angle_submitting.scaled 
+                      + wind.v.scaled +(1|station_name)
+                      ,family=binomial(link="logit"),data=df.model)
+save(glmer.all.intercepts,file="./models/GLM/glmer.all.intercepts.Rdata")
+r.squaredGLMM(glmer.all.intercepts)
+summary(glmer.all.intercepts)
+load("./models/GLM/glmer.all.intercepts.Rdata")
+```
+
+```{r}
+df.model$res=residuals(model,df.model,type="response")
+df.model$pred=predict(model,df.model,type="response")
+hist(df.model$res)
+df.model.plot<-filter(df.model,timebin>=as.POSIXct("2020-02-29 01:00:00", tz="UTC"),timebin<as.POSIXct("2020-04-01 01:00:00", tz="UTC"))
+plot(df.model.plot$timebin[which(df.model.plot$RecRec=="Rt2 Rt4")],df.model.plot$res[which(df.model.plot$RecRec=="Rt2 Rt4")])
+plot(df.model.plot$cond.schellebelle[which(df.model.plot$RecRec=="Rt2 Rt5")],df.model.plot$res[which(df.model.plot$RecRec=="Rt2 Rt5")])
+plot(df.model.plot$cond.schellebelle,df.model.plot$res)
+df.model.plot$fstation_name=as.factor(df.model.plot$station_name)
+plot(df.model.plot$fstation_name,df.model.plot$res)
+df.model.plot$fdistm50=as.factor(df.model.plot$fdistm50)
+plot(df.model.plot$fdistm50,df.model.plot$res)
+plot(df.model.plot$Tilt_angle_submitting,df.model.plot$res)
+ggplot(df.model.plot,aes(x=Tilt_angle,y=res))+geom_point()+geom_smooth(method = lm)
+plot(df.model.plot$water.height.schoonaarde,df.model.plot$res)
+
+```
+
+```{r}
+df.model$logit=log(df.model$pred/(1-df.model$pred))
+
+ggplot(df.model[sample(nrow(df.model), 5000),], aes(distm,logit))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess")
+ggplot(df.model[sample(nrow(df.model), 5000),], aes(Average_noise,logit))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess")
+ggplot(df.model[sample(nrow(df.model), 5000),], aes(Tilt_angle,logit))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess")
+ggplot(df.model[sample(nrow(df.model), 5000),], aes(Tilt_angle_submitting,logit))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess")
+ggplot(df.model[sample(nrow(df.model), 5000),], aes((water.height.schoonaarde),logit))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess")
+```
+
+
+```{r}
+car::vif(model) #http://r-statistics.co/Logistic-Regression-With-R.html
+
+optCutOff <- optimalCutoff(df.model$perc, df.model$pred)[1] #http://r-statistics.co/Logistic-Regression-With-R.html
+misClassError(df.model$perc, df.model$pred, threshold = optCutOff) #http://r-statistics.co/Logistic-Regression-With-R.html
+
+plotROC(df.model$perc,df.model$pred)
+
+binnedplot(na.omit(fitted(model)), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+binnedplot(na.omit(df.model$Average_noise), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+binnedplot(na.omit(df.model$Tilt_angle), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+binnedplot(na.omit(df.model$Tilt_angle_submitting), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+binnedplot(na.omit(df.model$water.height.schoonaarde), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+binnedplot(na.omit(df.model$distm), 
+           na.omit(residuals(model, type = "response")), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray") #https://bookdown.org/jefftemplewebb/IS-6489/logistic-regression.html
+
+plot(model)
+plot(model, which = 4, id.n = 3)
+```
+
+```{r}
+# use the position in the tidal cycle
+
+dfd50_day <- expand.grid(tide.numeric.round = seq(-300, 480, by=60))
+
+df.model.plot2<-df.model[,c('timebin','Average_noise','water.height.schoonaarde.submitting.corrected','Average_noise.scaled','water.height.schoonaarde.submitting.scaled','Tilt_angle','Tilt_angle.scaled','Tilt_angle_submitting','Tilt_angle_submitting.scaled','timedif.HWLW.mins_post','timedif.HWLW.mins_prior','ebb.period','flood.period','tidal.phase','q.melle')]
+
+df.model.plot2$tide.numeric<-NA
+df.model.plot2$tide.numeric[which(df.model.plot2$tidal.phase=="ebb")]=df.model.plot2$timedif.HWLW.mins_post[which(df.model.plot2$tidal.phase=="ebb")]
+df.model.plot2$tide.numeric[which(df.model.plot2$tidal.phase=="flood")]=df.model.plot2$timedif.HWLW.mins_prior[which(df.model.plot2$tidal.phase=="flood")]
+df.model.plot2$tide.numeric[which(df.model.plot2$tidal.phase=="kentering")]=0
+df.model.plot2$tide.numeric.round <- RoundTo(df.model.plot2$tide.numeric,60)
+df.model.plot2$tide.numeric.round[which(df.model.plot2$tide.numeric.round==540)]=-300
+df.model.plot2$tide.numeric.round[which(df.model.plot2$tide.numeric.round==480)]=-300
+
+df.model.plot3 <- df.model.plot2 %>%
+  group_by(timebin) %>%
+  summarise_if(is.numeric, median, na.rm = TRUE)
+
+df.model.plot4 <- df.model.plot3 %>%
+  group_by(tide.numeric.round) %>%
+  add_count() %>%
+  summarise_if(is.numeric, median, na.rm = TRUE)
+
+expand.grid.df <- function(...) Reduce(function(...) merge(..., by=NULL), list(...))
+
+df.model.plot5 <- expand.grid.df(distm=seq(0, 1000, by=1),df.model.plot4)
+
+colnames(df.model.plot5)[1]="distm"
+
+df.model.plot5$distm.scaled = (df.model.plot5$distm-mean(df.model$distm,na.rm=TRUE))/sd(df.model$distm,na.rm=TRUE)
+
+df.model.plot5$wind.v.scaled<-0
+
+model<-glm(update(glm.AIC_3way_interaction$formula,~ . +wind.v.scaled),"binomial",df.model)
+
+df.model.plot5$pred<-predict(model,df.model.plot5,type = "response")
+
+df.model.plot5$ftide.numeric.round <- as.factor(df.model.plot5$tide.numeric.round)
+
+df.model.plot5.D50 <- df.model.plot5 %>% 
+  group_by(tide.numeric.round) %>% 
+  slice(which.min(abs(pred-0.5)))
+
+df.model.plot5$order.tide<-NA
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==480)]=1
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==420)]=2
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==360)]=3
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==300)]=4
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==240)]=5
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==180)]=6
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==120)]=7
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==60)]=8
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==0)]=9
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==-60)]=10
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==-120)]=11
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==-180)]=12
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==-240)]=13
+df.model.plot5$order.tide[which(df.model.plot5$tide.numeric.round==-300)]=14
+df.model.plot5$forder.tide <- as.factor(df.model.plot5$order.tide)
+
+df.model.plot5 <- df.model.plot5[order(df.model.plot5$order.tide),]
+
+df.model.plot5.D50$order.tide<-NA
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==480)]=1
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==420)]=2
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==360)]=3
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==300)]=4
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==240)]=5
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==180)]=6
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==120)]=7
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==60)]=8
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==0)]=9
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==-60)]=10
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==-120)]=11
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==-180)]=12
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==-240)]=13
+df.model.plot5.D50$order.tide[which(df.model.plot5.D50$tide.numeric.round==-300)]=14
+df.model.plot5.D50$forder.tide <- as.factor(df.model.plot5.D50$order.tide)
+
+df.model.plot5.D50 <- df.model.plot5.D50[order(df.model.plot5.D50$order.tide),]
+
+df.model.plot5.D50.HW <- df.model.plot5.D50[which(df.model.plot5.D50$tide.numeric.round==-300),]
+df.model.plot5.D50.HW$order.tide=1
+df.model.plot5.D50.HW$forder.tide="1"
+df.model.plot5.D50.HW$tide.numeric.round=480
+df.model.plot5.D50.HW$ftide.numeric.round=as.factor(df.model.plot5.D50.HW$tide.numeric.round)
+df.model.plot5.D50 <- rbind(df.model.plot5.D50.HW,df.model.plot5.D50)
+df.model.plot5.D50$phase<-NA
+df.model.plot5.D50$phase[which(df.model.plot5.D50$tide.numeric.round>0)]="Ebb"
+df.model.plot5.D50$phase[which(df.model.plot5.D50$tide.numeric.round<0)]="Flood"
+df.model.plot5.D50$phase[which(df.model.plot5.D50$tide.numeric.round==0)]="LW"
+df.model.plot5.D50$phase[which(df.model.plot5.D50$tide.numeric.round==480)]="HW"
+df.model.plot5.D50$phase[which(df.model.plot5.D50$tide.numeric.round==-300)]="HW"
+
+df.model.plot5.HW <- df.model.plot5[which(df.model.plot5$tide.numeric.round==-300),]
+df.model.plot5.HW$order.tide=1
+df.model.plot5.HW$forder.tide="1"
+df.model.plot5.HW$tide.numeric.round=480
+df.model.plot5.HW$ftide.numeric.round=as.factor(df.model.plot5.HW$tide.numeric.round)
+df.model.plot5 <- rbind(df.model.plot5.HW,df.model.plot5)
+
+label_tide = c(
+  '1' = expression(paste("P"["high water"]," (1 hour)")),
+  '2' = expression(paste("P"["ebb"]," (1 hour)")),
+  '3' = expression(paste("P"["ebb"]," (2 hours)")),
+  '4' = expression(paste("P"["ebb"]," (3 hours)")),
+  '5' = expression(paste("P"["ebb"]," (4 hours)")),
+  '6' = expression(paste("P"["ebb"]," (5 hours)")),
+  '7' = expression(paste("P"["ebb"]," (6 hours)")),
+  '8' = expression(paste("P"["ebb"]," (7 hours)")),
+  '9' = expression(paste("P"["low water"]," (1 hour)")),
+  '10' = expression(paste("P"["flood"]," (1 hour)")),
+  '11' = expression(paste("P"["flood"]," (2 hours)")),
+  '12' = expression(paste("P"["flood"]," (3 hours)")),
+  '13' = expression(paste("P"["flood"]," (4 hours)")),
+  '14' = expression(paste("P"["high water"]," (1 hour)")))
+
+label_tide.ebb = c(
+  '1' = expression(paste("P"["high water"]," (1 hour)")),
+  '2' = expression(paste("P"["ebb"]," (1 hour)")),
+  '3' = expression(paste("P"["ebb"]," (2 hours)")),
+  '4' = expression(paste("P"["ebb"]," (3 hours)")),
+  '5' = expression(paste("P"["ebb"]," (4 hours)")),
+  '6' = expression(paste("P"["ebb"]," (5 hours)")),
+  '7' = expression(paste("P"["ebb"]," (6 hours)")),
+  '8' = expression(paste("P"["ebb"]," (7 hours)")),
+  '9' = expression(paste("P"["low water"]," (1 hour)")))
+
+label_tide.flood = c(
+  '9' = expression(paste("P"["low water"]," (1 hour)")),
+  '10' = expression(paste("P"["flood"]," (1 hours)")),
+  '11' = expression(paste("P"["flood"]," (2 hours)")),
+  '12' = expression(paste("P"["flood"]," (3 hours)")),
+  '13' = expression(paste("P"["flood"]," (4 hours)")),
+  '14' = expression(paste("P"["high water"]," (1 hour)")))
+
+col_tide = c(
+  '1' = "gray1",
+  '2' = "gray8",
+  '3' = "gray20",
+  '4' = "gray32",
+  '5' = "gray44",
+  '6' = "gray58",
+  '7' = "gray72",
+  '8' = "gray86",
+  '9' = "gray100",
+  '10' = "gray80",
+  '11' = "gray60",
+  '12' = "gray40",
+  '13' = "gray20",
+  '14' = "gray1"
+)
+
+col_tide.ebb = c(
+  '1' = "gray1",
+  '2' = "gray8",
+  '3' = "gray20",
+  '4' = "gray32",
+  '5' = "gray44",
+  '6' = "gray58",
+  '7' = "gray72",
+  '8' = "gray86",
+  '9' = "gray100"
+)
+
+col_tide.flood = c(
+  '9' = "gray100",
+  '10' = "gray80",
+  '11' = "gray60",
+  '12' = "gray40",
+  '13' = "gray20",
+  '14' = "gray1"
+)
+
+# linetype_tide = c(
+#   '-300' = "dotted",
+#   '-200' = "dotted",
+#   '-100' = "dotted",
+#   '0' = "dashed",
+#   '100' = "solid",
+#   '200' = "solid",
+#   '300' = "solid",
+#   '400' = "solid",
+#   '500' = "solid"
+# )
+
+pebb = df.model.plot5 %>% 
+  filter (tide.numeric.round >= 0) %>%
+  arrange(order.tide) %>%
+  ggplot(aes(x=distm)) +
+  theme_bw() +
+  theme(legend.text = element_text(hjust = 0)) +
+  geom_tile(data = data.frame(prob =  seq(0,1, by = 0.025)),
+            aes(x = 550, y = prob, fill = prob), width = 1100) +
+  scale_fill_gradient2(midpoint = 0.5, low ="#348499", mid = "gray95", high = "#E6301C") +
+  geom_hline(yintercept = 0.5, colour = "white", size = 1) +
+  geom_vline(xintercept = seq(200, 1000, 200), alpha= 0.2) +
+  geom_path(aes(y = pred, colour = forder.tide, group = forder.tide), size = 1, alpha = 0.7) +
+  scale_x_continuous(breaks = seq(200, 1000, 200), expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  # scale_linetype_manual(labels = label_tide.ebb, values= linetype_tide) +
+  scale_colour_manual(labels = label_tide.ebb, values = col_tide.ebb) +
+  guides(colour =guide_legend(title=NULL), fill = "none") +
+  labs(x = "Distance (m)", y = "Probability of detection") +
+  theme(axis.text.x=element_text(angle = -45, hjust = 0))
+
+pebb
+
+pflood = df.model.plot5 %>% 
+  filter(tide.numeric.round <= 0) %>%
+  arrange(order.tide) %>%
+  ggplot(aes(x=distm)) +
+  theme_bw() +
+  theme(legend.text = element_text(hjust = 0)) +
+  geom_tile(data = data.frame(prob =  seq(0,1, by = 0.025)),
+            aes(x = 550, y = prob, fill = prob), width = 1100) +
+  scale_fill_gradient2(midpoint = 0.5, low ="#348499", mid = "gray95", high = "#E6301C") +
+  geom_hline(yintercept = 0.5, colour = "white", size = 1) +
+  geom_vline(xintercept = seq(200, 1000, 200), alpha= 0.2) +
+  geom_path(aes(y = pred, colour = forder.tide, group = order.tide), size = 1, alpha = 0.7) +
+  scale_x_continuous(breaks = seq(200, 1000, 200), expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0)) +
+  # scale_linetype_manual(labels = label_tide.flood, values= linetype_tide) +
+  scale_colour_manual(labels = label_tide.flood, values = col_tide.flood) +
+  guides(colour =guide_legend(title=NULL), fill = "none") +
+  labs(x = "Distance (m)", y = "Probability of dedection") +
+  theme(axis.text.x=element_text(angle = -45, hjust = 0))
+
+pflood
+
+df.model.plot5.D50$new.phase<-c('(1 hour)', '(1 hour)', '(2 hours)', '(3 hours)', '(4 hours)', '(5 hours)', '(6 hours)', '(7 hours)', '(1 hour)', '(1 hour)', '(2 hours)', '(3 hours)', '(4 hours)', '(1 hour)')
+df.model.plot5.D50$new.phase<-paste(df.model.plot5.D50$phase,df.model.plot5.D50$new.phase,sep=" ")
+
+#### Plot circle prediction pbinom: day ####
+pcirc = df.model.plot5 %>% 
+  filter(distm <= 600) %>%
+  ggplot() +
+  theme_void() +
+  theme(axis.title = element_blank(),
+        axis.text.x = element_blank(),
+        legend.position = 'none',
+        strip.text = element_blank()) +
+  geom_tile(aes(1, distm, fill = pred)) +
+  geom_hline(data = df.model.plot5.D50, aes(yintercept = distm),
+             colour = "white", size = 1) +
+  geom_hline(yintercept = seq(200, 600, by = 200), alpha = 0.2) +
+  geom_text(data = data.frame(x =1, y = seq(200,600, by = 200)),
+            aes(x, y, label = y), alpha = 0.4) +
+  geom_text(data =df.model.plot5.D50,
+            aes(0.65, distm, label = paste0(round(distm, digits = 0), " m")),
+            colour = "black", nudge_y = 275, fontface = "bold") +
+  geom_text(data =df.model.plot5.D50,
+            aes(0.5, 700, label = new.phase),
+            colour = "black",size=3) +
+  #geom_text(data = df.model.plot5.D50, aes(x = 0.2, label = ftide.numeric.round), y = Inf) +
+  scale_fill_gradient2(midpoint = 0.5, low ="#348499", mid = "gray95", high = "#E6301C") +
+  coord_polar() +
+  facet_wrap(~order.tide,nrow = 4)
+
+pcirc
+
+write.csv(round(df.model.plot5.D50[,c("distm","tide.numeric.round","Average_noise","water.height.schoonaarde.submitting.corrected","Tilt_angle","ebb.period","flood.period","q.melle")],digits=2),"./data/internal/overview_tidal_cycle.csv")
+
+pdf("./figures/DR_tide.pdf",width = 3.3464566929,height=5)
+ggarrange(pebb,pflood,nrow = 2)
+dev.off()
+
+pdf("./figures/DR_tide_large.pdf",width = 6.6929133858,height=8)
+ggarrange(pebb,pflood,nrow = 2)
+dev.off()
+
+pdf("./figures/DR_tide_circ.pdf",width = 6.6929133858,height=6.6929133858)
+pcirc
+dev.off()
+```
+
+```{r}
+invlogit <- function(x) exp(x)/(1 + exp(x))
+x <- seq(-4, 4, 0.01)
+model<-glm(update(glm.AIC_3way_interaction$formula,~ . +wind.v.scaled),"binomial",df.model)
+x.not.scaled=(x*sd(df.model$distm,na.rm=TRUE))+mean(df.model$distm,na.rm=TRUE)
+y <- invlogit(coef(model)[1]+coef(model)[2]*x)
+logit.model.plot<-ggplot(data.frame(x = x.not.scaled, y = y), aes(x, y)) +
+  geom_boxplot(df.model,mapping=aes(x=distm50,y=perc,group=fdistm50),color="grey") + 
+  geom_line() +
+  #ggtitle(expression(paste("y = ", logit^-1,"(distance)"))) + 
+  ylab("Probability of detection") +
+  xlab("Distance (m)") + theme_bw() +
+  xlim(0,1200)
+df.model$fdistm50=as.factor(df.model$fdistm50)
+print(logit.model.plot)
+pdf("./figures/logit_distance_plot.pdf",width = 3.3464566929,height=3.3464566929)
+print(logit.model.plot)
+dev.off()
+```
+
+```{r}
+RecRec.for.plot=unique(df.model$RecRec[which(df.model$distm50==400)])
+for (i in RecRec.for.plot){
+  df.model.subset<-df.model[which(df.model$RecRec==i),]
+  df.model.subset=df.model.subset[order(df.model.subset$timebin),]
+  
+  df.model.subset <- filter(df.model.subset,timebin>=as.POSIXct("2020-04-07 01:00:00",tz="UTC"),timebin<as.POSIXct("2020-04-14 01:00:00",tz="UTC"))
+  
+  p <- df.model.subset %>%
+      ggplot2::ggplot(aes(x=timebin, y=perc)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob and noise") +
+      theme_ipsum() + geom_line(aes(x=timebin, y=Average_noise.scaled)) + ggtitle(i)
+  print(p)
+  
+  q <- df.model.subset %>%
+      ggplot2::ggplot(aes(x=timebin, y=res)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("residuals and noise") +
+      theme_ipsum() + geom_line(aes(x=timebin, y=Average_noise.scaled)) + ggtitle(i)
+  print(q)
+  
+  r <- df.model.subset %>%
+      ggplot2::ggplot(aes(x=timebin, y=perc)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob and predictions") +
+      theme_ipsum() + geom_line(aes(x=timebin, y=pred)) + ggtitle(i)
+  print(r)
+}
+```
+
+```{r}
+for (i in unique(df.model$RecRec)){
+  df.model.temp<-df.model[which(df.model$RecRec==i),]
+  df.model.temp=df.model.temp[order(df.model.temp$timebin),]
+  if (length(unique(df.model.temp$perc))==1){}else{acf(df.model.temp$perc,lag.max=100,main=paste("original",i),ylab=paste("original",i))}
+  acf(df.model.temp$res,lag.max=100,main=paste("residuals",i),ylab=paste("residuals",i))
+  hist(df.model.temp$res,main=paste("residuals",i))
+}
+
+setorder(df.model, RecRec, timebin)
+acf(df.model$perc,lag.max=100,main=paste("original"),ylab=paste("original"))
+acf(df.model$res,lag.max=100,main=paste("residuals"),ylab=paste("residuals"))
+hist(df.model$res,main=paste("residuals",i))
+```
+
+
+```{r}
+#Random forests
+df.rf=df.model
+df.rf$distm2<-df.rf$distm^2
+df.rf=df.rf[which(is.na(df.rf$Average_noise)==FALSE),]
+df.rf=df.rf[which(is.na(df.rf$neerslag.zele)==FALSE),]
+df.rf$nsignal.direction<-NA
+df.rf$nsignal.direction[which(df.rf$signal.direction=="upstream")]=-1
+df.rf$nsignal.direction[which(df.rf$signal.direction=="downstream")]=1
+df.rf$nsignal.direction[which(df.rf$signal.direction=="0")]=0
+df.rf$inter_signal_direction_distm=df.rf$distm*df.rf$nsignal.direction
+#df.rf=df.rf[-which(df.rf$distm==0),]
+
+fmla <- as.formula(perc~distm.scaled
+                      + q.melle.abs.scaled 
+                      + angle.current.signal 
+                      + Average_noise.scaled 
+                      + water.height.schoonaarde.scaled 
+                      + Tilt_angle.scaled 
+                      + Tilt_angle_submitting.scaled
+                      + tidal.range.scaled 
+                      + Temperature.scaled
+                      + cond.schellebelle.scaled
+                      + turb.scaled
+                      + wind.v.scaled
+                      + wind.r.scaled 
+                      + neerslag.scaled
+                   )
+
+model_rf <- ranger(fmla, # formula
+                         df.rf, # data
+                         num.trees = 500,
+                         respect.unordered.factors = "order",importance = "permutation")
+model_rf$variable.importance
+df.rf$pred <- predict(model_rf, df.rf)$predictions
+df.rf$residuals<-df.rf$perc-df.rf$pred
+df.rf=df.rf[order(df.rf$timebin),]
+for (i in unique(df.rf$RecRec)){(acf(df.rf$residuals[which(df.rf$RecRec==i)]))}
+
+ggplot(df.rf, aes(x = pred, y = residuals)) +
+  geom_point()
+
+ggplot(df.rf, aes(x = perc, y = residuals)) +
+  geom_point()
+```
+

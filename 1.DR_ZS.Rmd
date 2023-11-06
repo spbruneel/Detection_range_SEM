@@ -1,0 +1,1425 @@
+---
+title: "Detection range Zeeschelde"
+author: "Stijn Bruneel"
+date: "5 januari 2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+source("./0.Finetune_folder_structure_for_github_use.R")
+options(stringsAsFactors = FALSE)
+```
+
+```{r}
+#Add environmental data
+filelist<-list.files("./data/external/env/receiver/") #Each receiver/station has one file with env measurements (taken every hour)
+for (i in 1:length(filelist)){ #Run through all file names
+  filename=paste("./data/external/env/receiver/",filelist[i],sep="")
+  file.temp=read.csv(filename)
+  if (i==1){file=file.temp} else {file=rbind(file,file.temp)}
+  file.temp.meta.start=file.temp[c(1:5),] #Start PC time and start receiver time (are the same here)
+  file.temp.meta.start$Units<-NULL #blanking interval in ms
+  file.temp.meta.start<-spread(file.temp.meta.start, Description, Data)
+  if (i==1){file.meta.start=file.temp.meta.start} else {file.meta.start=rbind(file.meta.start,file.temp.meta.start)}
+  file.temp.meta.end=file.temp[c((nrow(file.temp)-3):nrow(file.temp)),] #End PC time and end receiver time (are not the same here: time drift)
+  file.temp.meta.end$Units<-NULL #blanking interval in ms
+  file.temp.meta.end<-spread(file.temp.meta.end, Description, Data)
+  if (i==1){file.meta.end=file.temp.meta.end} else {file.meta.end=rbind(file.meta.end,file.temp.meta.end)}
+}
+env.rec=file
+colnames(env.rec)=c("timebin","Rec","Var.Rec","value.Rec","units.Rec")
+
+#file.meta is used to determine the time drift
+file.meta.start$Pos="Start"
+file.meta.end$Pos="End"
+file.meta<-rbind(file.meta.start[,c("Date.and.Time..UTC.","Receiver","PC Time","Pos")],file.meta.end[,c("Date.and.Time..UTC.","Receiver","PC Time","Pos")])
+file.meta$`PC Time`=as.POSIXct(file.meta$`PC Time`)
+attributes(file.meta$`PC Time`)$tzone <- "UTC" 
+file.meta$timedrift<-difftime( file.meta$`PC Time`,file.meta$Date.and.Time..UTC.,units = c( "secs"),tz="utc")#total time drift over the entire study period
+file.meta.new=file.meta[c(9:16),]
+file.meta.new$Date.and.Time..UTC.start=file.meta$Date.and.Time..UTC.[c(1:8)]
+colnames(file.meta.new)[1]="Date.and.Time..UTC.end"
+file.meta.new$duration=difftime( file.meta.new$Date.and.Time..UTC.end,file.meta.new$Date.and.Time..UTC.start,units = c( "secs"),tz="utc") #total duration study period
+file.meta.new<-file.meta.new %>% 
+  rename(receiver_id = Receiver)
+
+env.rec$timebin <- as.POSIXct(env.rec$timebin, tz="UTC")
+
+env.rec <- filter(env.rec,timebin>=as.POSIXct("2020-02-28 12:00:00", tz="UTC"),timebin<as.POSIXct("2020-04-29 12:00:00", tz="UTC"))
+
+env.rec$value.Rec<-as.numeric(env.rec$value.Rec)
+
+vars.rec.with.units<-unique(paste(env.rec$Var.Rec,env.rec$units.Rec))
+
+env.rec$units.Rec<-NULL
+
+env.rec<-spread(env.rec, Var.Rec, value.Rec) #From long to wide dataframe
+
+env.rec$signal.to.noise<-(8*env.rec$`Hourly Detections on 69 kHz`)/env.rec$`Hourly Pings on 69 kHz` #Each signal consists of 8 pings. If not all pings of a signal are received the signal is not detected. Pings might also originate from external (so not from stations) noise on a similar frequency.
+
+RecTag=read_excel("./data/external/telemetry/RecTag.xlsx") #File linking transmitter, receiver and station_name
+RecTag=RecTag[,c("Rec","station_name_submitting")]
+env.rec=merge(env.rec,RecTag,by="Rec")#Add the station_name to the env file
+env.rec<-env.rec %>% 
+  rename(station_name = station_name_submitting,Average_noise=`Average noise`,sea_depth=`Seawater depth`,Tilt_angle=`Tilt angle`)#renaming because spaces in variable names give problems: Avoid!
+
+env.rec.average.per.receiver <- env.rec%>%
+  dplyr::group_by(Rec)%>%
+  dplyr::summarise(signal.to.noise=mean(signal.to.noise),mean.det=mean(`Hourly Detections on 69 kHz`),tilt.angle=mean(Tilt_angle),temperature=mean(Temperature))
+
+env.rec<-subset(env.rec,select=-c(Battery,`Memory Capacity`,`Motor battery voltage`))
+
+#It seems measurements are not always taken exactly on the hour. Sometimes it is a second later for instance for 2020-03-27 08:00:00 Rt1; 2020-03-07 22:00:00 Rt1; and 2020-03-25 10:00:00 Rt2: Therefore round the timebin on the hour first
+env.rec$timebin<-round_date(env.rec$timebin,"hours")
+```
+
+```{r}
+#Summary stats of the env data collected by the receivers
+env.rec%>%
+  dplyr::group_by(station_name)%>%
+  dplyr::summarise(Noise_mean=mean(Average_noise),
+                   Noise_sd=sd(Average_noise),
+                   tilt_mean=mean(Tilt_angle),
+                   tilt_sd=sd(Tilt_angle))
+```
+
+```{r}
+df<-read.csv("./data/external/telemetry/range_test_zeeschelde_2020.csv",stringsAsFactors = FALSE) #datafile: per row, one detection
+```
+
+```{r eval=FALSE}
+#This chunk is a short summary of code that is described more extensively further. It allows a quick preview and also provides a control to see if outcomes have changed by redefining variables
+#The graphs plotted in following chunks should be used for publication because in this preliminary chunck no zeros are artificially added (NA instead of 0)
+#It can only be run after this entire script has been run at least once in advance
+df.temp<-df
+df.temp$count=1
+
+df.temp_no_timebin2 <- df.temp%>%
+  dplyr::group_by(station_name,tag_id)%>%
+  dplyr::summarise(count_sum=sum(count))
+
+colnames(df.temp_no_timebin2)[2]="Tag"
+
+RecTag=read_excel("./data/external/telemetry/RecTag.xlsx")
+RecTag=RecTag[,c("Tag","station_name_submitting")]
+df.temp_no_timebin2=merge(df.temp_no_timebin2,RecTag,by="Tag")
+df.temp_no_timebin2$RecRec=paste(df.temp_no_timebin2$station_name,df.temp_no_timebin2$station_name_submitting)
+
+distREC.long=read.csv("./data/internal/telemetry/distance.csv")
+
+df.temp_no_timebin2=merge(df.temp_no_timebin2,distREC.long[,c("RecRec","distm")],by="RecRec")#Add the distance data to the telemetry data
+
+df.temp_no_timebin2$distm50<-round(df.temp_no_timebin2$distm/50)*50 #Round the distance value to the closest 50-step value (0,50,100,150,etc.)
+
+df.temp_no_timebin2$fdistm50<-as.factor(df.temp_no_timebin2$distm50)
+
+df.temp_no_timebin2_ref0m <- df.temp_no_timebin2%>%
+  dplyr::group_by(station_name_submitting)%>%
+  dplyr::filter(distm == 0)%>%
+  dplyr::summarise(count_sum_ref0=sum(count_sum))
+
+df.temp_no_timebin2 <- left_join(df.temp_no_timebin2,df.temp_no_timebin2_ref0m, by=c("station_name_submitting"))
+df.temp_no_timebin2$perc=100*df.temp_no_timebin2$count_sum/df.temp_no_timebin2$count_sum_ref0
+#df.temp_no_timebin2$perc=100*df.temp_no_timebin2$count_sum/(40*1427)
+
+ggplot(data=df.temp_no_timebin2, aes(x=fdistm50, y=perc))+ 
+    geom_boxplot() 
+
+ggplot(data=df.temp_no_timebin2, aes(x=fdistm50, y=count_sum))+ 
+    geom_boxplot() 
+
+ggplot(data=df.temp_no_timebin2, aes(x=fdistm50, y=perc,group=station_name,color=station_name))+ geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+
+ggplot(data=df.temp_no_timebin2, aes(x=fdistm50, y=perc,group=station_name_submitting,color=station_name_submitting))+ 
+    geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+```
+
+```{r}
+df[,c("X","pk","application_type","network_project_code","sensor_type","sensor_unit","sensor_value","sensor_value_acceleration","sensor_value_depth","sensor_value_temperature","signal_to_noise_ratio","source_file","qc_flag")]<-NULL #Remove the variables that we will not need
+
+df$pdate_time <- as.POSIXct(df$date_time, tz="UTC")
+df <- filter(df,pdate_time>=as.POSIXct("2020-03-01 12:00:00", tz="UTC"),pdate_time<as.POSIXct("2020-04-27 12:00:00", tz="UTC"))
+
+df<-merge(df,file.meta.new[,c("receiver_id","timedrift","Date.and.Time..UTC.start","duration")],by="receiver_id")
+df$time.correction<-df$timedrift*(as.numeric(difftime(df$pdate_time,df$Date.and.Time..UTC.start,tz="UTC",units = c( "secs")))/as.numeric(df$duration)) #The position in the study period will determine the time drift for a specific signal (the closer to the end the larger the timedrift: linear regression)
+df$ndate_time<-df$pdate_time+df$time.correction #Correct the time (receiver time becomes pc time)
+df$date_time=df$ndate_time
+dates=df$date_time
+df[,c("ndate_time","duration","Date.and.Time..UTC.start","pdate_time")]<-NULL
+
+dates_range=difftime(max(dates), min(dates), tz="UTC",units = c( "hours")) #Duration of the study
+```
+
+```{r eval=FALSE}
+#Binning time: Option1: Good when you want to bin in incomplete units (half hours, 15mins, etc.)
+#Bins to next period: Bv 1h29 is assigned to 2h and 1h31 is assigned to 2h when working with a timebin of 1hour)(Overall comment: not optimal: it would be better to include detections to the closest period: see option 2). 
+
+timebin.step=3600 #to group detections in timebins: in seconds
+df_xts <- xts(x = df, order.by = dates)#Make xts object
+head(index(df_xts))
+head(dates)
+##align time function (x=xts dataframe, n= seconds to which you want to bin)
+align.time.down=function(x,n){index(x)=index(x)-n;align.time(x,n)}
+# use function for timebin.step cut
+c=align.time.down(df_xts,timebin.step)
+head(c)
+#convert xts back to dataframe
+d <- as.data.frame(c)
+e <- as.data.frame(index(c))
+colnames(e)="timebin"
+databin <- cbind(d,e)
+```
+
+```{r}
+#Binning time: Option2: Good for full units: 1hour, 1day, 1 minute, etc.
+#Bins to closest period: Bv 1h29 is assigned to 1h and 1h31 is assigned to 2h when working with a timebin of 1hour)
+#preferred option and used further on (1 out of 2 chunk options has to have eval=FALSE)
+databin<-df
+databin$timebin<-round_date(databin$date_time,"hours")
+```
+
+```{r}
+databin$counts <- 1 #This way summarize(sum) instead of count() can be used. Makes it easier for adding zero values (see further)
+
+length(unique(databin$receiver_id)) #Check how the data looks like
+length(unique(databin$tag_id))
+length(unique(databin$animal_id))
+length(unique(databin$station_name))
+table(databin$station_name,databin$tag_id)
+table(databin$animal_id,databin$tag_id)
+
+databin<-mutate(databin, RecTag = paste(receiver_id, tag_id, sep='_'))#Create new variable RecTag 
+
+#aggregate (or binning of the detections)
+data_agg <- databin %>%
+  dplyr::group_by(tag_id,receiver_id,RecTag,timebin,station_name)%>% #These variables will be present in new aggregated data frame
+  dplyr::summarise(count_sum=sum(counts))
+
+names(data_agg)[names(data_agg) == "tag_id"] <- "Tag"
+names(data_agg)[names(data_agg) == "receiver_id"] <- "Rec"
+
+data_agg$RecTagTime=paste(data_agg$RecTag,data_agg$timebin,sep="_") #Will be used further on to add zero data
+
+data_agg=data_agg[,c("Tag","Rec","RecTag","timebin","station_name","count_sum","RecTagTime")]
+
+```
+
+```{r}
+#Add zeros to the dataframe
+timebin.step=3600 #See option 2 for binning: we are using hours = 3600secs
+a=seq(from=min(databin$timebin),to=max(databin$timebin),by=timebin.step)#First option: create time series yourself based on timebin.step and use this to create a new dataframe of all possible combinations
+b=unique(databin$timebin)#Second option: use the unique values of the timebins to create a new dataframe of all possible combinations: the first options is most reliable, although both seem to give the same results for timebin.step=1800 seconden
+
+x=as.data.frame(expand.grid(Rec=unique(databin$receiver_id),Tag=unique(databin$tag_id),timebin=a)) #create a new dataframe of all possible combinations (so also those that are not present in data_agg (these missing values will be the zeros that need to be added in data_agg))
+
+x$RecTag=paste(x$Rec,x$Tag,sep="_") #finetune x
+x$station_name=NA
+x$count_sum=0
+x$RecTagTime=paste(x$RecTag,x$timebin,sep="_")
+
+RecTag=read_excel("./data/external/telemetry/RecTag.xlsx") #x does not have the station_name values. These are added here.
+for (i in 1:nrow(RecTag)){#Tried it first with a for loop through x, but that was way too slow
+  x$station_name[which(x$Rec %in% RecTag$Rec[i])]=RecTag$station_name_submitting[i]
+}
+
+z=x[-which(x$RecTagTime %in% data_agg$RecTagTime),c("Tag","Rec","RecTag","timebin","station_name","count_sum","RecTagTime")] #Select the values that are present in x, but not in data_agg
+
+data_agg_zeros_added=rbind(as.data.frame(data_agg),as.data.frame(z))#These values are added to data_agg (new rows) to serve as zero values
+
+write.csv(data_agg_zeros_added, file = "./data/internal/telemetry/data_agg_zeros_added.csv") #without env data
+```
+
+```{r}
+#Create maps with locations of receivers
+#Create dataset in which only one row per location is retained (first row that is encountered with a new)
+databin_loc=databin[ !duplicated(databin$receiver_id), ]
+#Dataframe with coordinate (make sure first long and then lat)
+coords <- cbind(long = as.numeric(as.character((databin_loc$deploy_longitude))),lat = as.numeric(as.character((databin_loc$deploy_latitude))))
+#Use coordinates dataframe to make SPDF
+coords_SP <- SpatialPointsDataFrame(coords,data = data.frame(databin_loc$station_name,databin_loc$Rec), proj4string = CRS("+init=epsg:4326")) 
+
+names(coords_SP)[1]<-"station_name"
+names(coords_SP)[2]<-"Rec"
+
+plot(coords_SP)
+#Text that is depicted when clicked on location
+Samples_text<-paste0("<b>Station</b>: ",coords_SP@data$station_name,
+                     "<br><b>Rec</b>: ",coords_SP@data$Rec)
+#Use leaflet to make the map (internet required)
+RangePlot<-leaflet()%>%
+  addTiles()%>%
+  addCircleMarkers(data=coords_SP,radius=8,fillColor = 'blue',fillOpacity=0.8,weight=1,color='black',popup=Samples_text,label=coords_SP@data$station_name,labelOptions = labelOptions(noHide = T))
+RangePlot
+
+#Determine the distance between receivers using longlat in meters
+#crs <- CRS("+init=epsg:32630")
+#coords_SP_tr<-spTransform(coords_SP,crs)
+#distREC=pointDistance(coords_SP_tr,lonlat=FALSE)
+
+#Determine the distance between receivers using longlat in degrees (slightly different from longlat in meters)
+distREC=pointDistance(coords_SP,lonlat = TRUE)
+colnames(distREC)=databin_loc$station_name
+rownames(distREC)=databin_loc$station_name
+
+write.csv(databin_loc[,c("station_name","deploy_latitude","deploy_longitude")],"./data/internal/telemetry/locations_receivers.txt")
+```
+
+```{r}
+loc_env<-read.csv("./data/internal/telemetry/locations_env.csv")
+coords <- cbind(long = (loc_env$long),lat = (loc_env$lat))
+coords_SP <- SpatialPointsDataFrame(coords,data = data.frame(loc_env$id,loc_env$unit,loc_env$station_name), proj4string = CRS("+init=epsg:4326")) 
+names(coords_SP)[1]<-"id"
+names(coords_SP)[2]<-"unit"
+names(coords_SP)[3]<-"station_name"
+plot(coords_SP)
+
+Samples_text<-paste0("<b>variable</b>: ",coords_SP@data$id,
+                     "<br><b>unit</b>: ",coords_SP@data$unit,
+                     "<br><b>station_name</b>: ",coords_SP@data$station_name)
+#Use leaflet to make the map (internet required)
+envPlot<-leaflet()%>%
+  addTiles()%>%
+  addCircleMarkers(data=coords_SP,radius=8,fillColor = 'blue',fillOpacity=0.8,weight=1,color='black',popup=Samples_text,label=coords_SP@data$id,labelOptions = labelOptions(noHide = T))
+envPlot
+```
+
+```{r}
+loc_env_rec<-read.csv("./data/internal/telemetry/locations_env_and_rec.csv")
+coords <- cbind(long = (loc_env_rec$long),lat = (loc_env_rec$lat))
+coords_SP <- SpatialPointsDataFrame(coords,data = as.data.frame(loc_env_rec$id), proj4string = CRS("+init=epsg:4326")) 
+names(coords_SP)[1]<-"id"
+plot(coords_SP)
+
+Samples_text<-paste0("<b>id</b>: ",coords_SP@data$id)
+#Use leaflet to make the map (internet required)
+envrecPlot<-leaflet()%>%
+  addTiles()%>%
+  addCircleMarkers(data=coords_SP,radius=8,fillColor = 'blue',fillOpacity=0.8,weight=1,color='black',popup=Samples_text,label=coords_SP@data$id,labelOptions = labelOptions(noHide = T))
+envrecPlot
+```
+
+```{r}
+#Read datafile that links the transmitters to the receivers (the transmitter that had the highest number of detections, was considered the built-in transmitter of that specific receiver)
+RecTag=read_excel("./data/external/telemetry/RecTag.xlsx")
+RecTag=RecTag[,c("Tag","station_name_submitting")]
+data_agg_zeros_added=merge(data_agg_zeros_added,RecTag,by="Tag")
+data_agg_zeros_added$RecRec=paste(data_agg_zeros_added$station_name,data_agg_zeros_added$station_name_submitting) #station_name will be the name of the receiving station while station_name_submitting will be the name of the submitting station
+
+databin$Tag<-databin$tag_id
+databin=merge(databin,RecTag,by="Tag")
+databin$RecRec=paste(databin$station_name,databin$station_name_submitting)
+```
+
+```{r}
+#Get the wide distance-dataframe to a long dataframe 
+distREC.long=melt(setDT(as.data.frame(distREC), keep.rownames = TRUE))
+distREC.long=distREC.long[-which(is.na(distREC.long$value)==TRUE),]#Remove the NA values
+distREC.long1=distREC.long #Create two dataframes to deal with for instance Rt1-Rt2 and Rt2-Rt1
+distREC.long2=distREC.long
+colnames(distREC.long1)=c("station1","station2","distm")
+colnames(distREC.long2)=c("station2","station1","distm")
+distREC.long=rbind(distREC.long1,distREC.long2)
+distREC.long$RecRec=paste(distREC.long$station1,distREC.long$station2)
+
+distREC.long=distREC.long[ !duplicated(distREC.long$RecRec), ]#Only keep the unique ones (example: 1 out of 2 Rt1-Rt1 pairs is removed)
+
+write.csv(distREC.long,"./data/internal/telemetry/distance.csv")
+
+data_agg_zeros_added=merge(data_agg_zeros_added,distREC.long[,c("RecRec","distm")],by="RecRec")#Add the distance data to the telemetry data
+
+databin=merge(databin,distREC.long[,c("RecRec","distm")],by="RecRec")#Add the distance data to the telemetry data
+
+```
+
+```{r}
+data_agg_zeros_added$distm50<-round(data_agg_zeros_added$distm/50)*50 #Round the distance value to the closest 50-step value (0,50,100,150,etc.)
+
+databin$distm50<-round(databin$distm/50)*50 #Round the distance value to the closest 50-step value (0,50,100,150,etc.)
+```
+
+```{r}
+#Add variable that describes the direction of the signal
+databin$signal.direction=NA
+databin$signal.direction[which(as.numeric(substr(databin$station_name_submitting,3,3))==as.numeric(substr(databin$station_name,3,3)))]="0"
+databin$signal.direction[which(as.numeric(substr(databin$station_name_submitting,3,3))>as.numeric(substr(databin$station_name,3,3)))]="upstream"
+databin$signal.direction[which(as.numeric(substr(databin$station_name_submitting,3,3))<as.numeric(substr(databin$station_name,3,3)))]="downstream"
+
+data_agg_zeros_added$signal.direction=NA
+data_agg_zeros_added$signal.direction[which(as.numeric(substr(data_agg_zeros_added$station_name_submitting,3,3))==as.numeric(substr(data_agg_zeros_added$station_name,3,3)))]="0"
+data_agg_zeros_added$signal.direction[which(as.numeric(substr(data_agg_zeros_added$station_name_submitting,3,3))>as.numeric(substr(data_agg_zeros_added$station_name,3,3)))]="upstream"
+data_agg_zeros_added$signal.direction[which(as.numeric(substr(data_agg_zeros_added$station_name_submitting,3,3))<as.numeric(substr(data_agg_zeros_added$station_name,3,3)))]="downstream"
+```
+
+```{r}
+#Determine reference detection count (at 0m: counts of built-in transmitter at receiver where the transmitter is built in)
+df_ref0 <- data_agg_zeros_added%>% 
+  dplyr::group_by(timebin,station_name_submitting)%>%
+  dplyr::filter(distm == 0)%>% #First option: use of the values at 0 meter (direct approach)
+  dplyr::summarise(count_sum_ref0=count_sum)
+
+df_max <- data_agg_zeros_added%>%
+  dplyr::group_by(timebin,station_name_submitting)%>%
+  dplyr::summarise(count_sum_max=max(count_sum)) #Second option: use of the maximum values under the assumption that this will be the counts at 0 meter (indirect approach)
+
+#Third option could be to use the theoretical number of submissions (average time interval between signals for Rt1,2,3,5 is 90 secs; for the other stations it is more (see further))
+
+df<-df_ref0 #We chose to continue with the first option
+df$count_sum_max=df_max$count_sum_max
+df$delta=df$count_sum_ref0-df_max$count_sum_max
+
+df.det.prob.too.high<-df[which(df$delta!=0),]
+
+100*nrow(df.det.prob.too.high)/nrow(df) #Percentage of det.probs that will be higher than 100%: Here it is zero: Meaning that there are no more detections received than there are submitted (At first we did not account for the timedrift and then 0.5% of the data had a Det.Prob>100%. Important to account for timedrift!)
+
+#Simple figures depicting trends in detection probability per station couple (receivers-submitters)
+q=list()
+p=list()
+for (t in 1:(1*length(unique(df$station_name_submitting)))){
+  df.temp=df[which(df$station_name_submitting==unique(df$station_name_submitting)[t]),]
+  q[[t]]<-ggplot(df.temp,aes(x=timebin,y=count_sum_ref0))+geom_line()+ggtitle(unique(df$station_name_submitting)[t])
+  p[[t]]<-ggplot(df.temp,aes(x=timebin,y=count_sum_max))+geom_line()+ggtitle(unique(df$station_name_submitting)[t])
+}
+ggarrange(q[[8]],p[[8]],q[[7]],p[[7]],q[[6]],p[[6]],q[[5]],p[[5]],q[[4]],p[[4]],q[[3]],p[[3]],q[[2]],p[[2]],q[[1]],p[[1]], ncol=2, nrow=8)
+ggsave("./figures/Count_detections_0m.tiff",width = 16,height=16)
+
+#Add the reference data
+data_agg_zeros_added <- left_join(data_agg_zeros_added,df_ref0, by=c("timebin", "station_name_submitting"))
+#Determine percentage (count over reference count)
+data_agg_zeros_added$perc<-100*data_agg_zeros_added$count_sum/data_agg_zeros_added$count_sum_ref0
+
+plot(data_agg_zeros_added$distm50,data_agg_zeros_added$perc)
+gam_y <- gam(data_agg_zeros_added$perc ~ s(data_agg_zeros_added$distm), method = "REML")
+plot(gam_y)
+gam.check(gam_y)
+```
+
+```{r}
+#Check time between signals at 0m
+databin_0m<-databin[which(databin$distm50==0),]
+databin_0m$date_time<-as.POSIXct(databin_0m$date_time,format='%Y-%m-%d %H:%M:%S',tz="utc")
+#difftime(databin_0m$date_time[1:5])
+databin_0m<-databin_0m %>%
+  arrange(RecRec, date_time) %>%
+  group_by(RecRec) %>%
+  mutate(diff = date_time - lag(date_time),
+         diff_secs = as.numeric(diff, units = 'secs'))
+for (i in 1:length(unique(databin_0m$RecRec))){
+  databin_0m.temp<-databin_0m[which(databin_0m$RecRec==unique(databin_0m$RecRec)[i]),]
+  hist(databin_0m.temp$diff_secs,main=paste("lag between signals",unique(databin_0m$RecRec)[i]))
+}
+```
+
+```{r}
+#Make violin plots with det.prob
+data_agg_zeros_added$fdistm50<-as.factor(data_agg_zeros_added$distm50)
+ggplot(data=data_agg_zeros_added, aes(x=fdistm50, y=perc))+ 
+    geom_boxplot() 
+ggsave("./figures/Percentage_detections_overview_1hour_timebin.tiff")
+
+violin.plot<-ggplot(data_agg_zeros_added, aes(x=fdistm50, y=perc)) +
+  geom_violin(scale = "width")
+violin.plot
+
+for (i in 1:length(unique(data_agg_zeros_added$RecRec))){
+  data_agg_zeros_added.temp<-data_agg_zeros_added[which(data_agg_zeros_added$RecRec==unique(data_agg_zeros_added$RecRec)[i]),]
+  hist(data_agg_zeros_added.temp$count_sum,main=paste("count",unique(data_agg_zeros_added$RecRec)[i]))
+  hist(data_agg_zeros_added.temp$perc,main=paste("%",unique(data_agg_zeros_added$RecRec)[i]))
+  violin.plot<-ggplot(data_agg_zeros_added.temp, aes(x=fdistm50, y=perc)) +
+  geom_violin(scale = "width")+ggtitle(unique(data_agg_zeros_added$RecRec)[i])
+print(violin.plot)
+}
+
+violin_facet <-ggplot(data=data_agg_zeros_added, aes(x=fdistm50,y= perc))+
+  geom_violin(scale = "width")+
+  facet_wrap(~RecRec)
+violin_facet
+ggsave("./figures/violin_facet.tiff",width = 16,height=16)
+
+for (i in 1:length(unique(data_agg_zeros_added$fdistm50))){
+  data_agg_zeros_added.temp<-data_agg_zeros_added[which(data_agg_zeros_added$fdistm50==unique(data_agg_zeros_added$fdistm50)[i]),]
+  violin_facet <-ggplot(data=data_agg_zeros_added.temp, aes(x=fdistm50,y= perc))+
+  geom_violin(scale = "width")+
+  facet_wrap(~RecRec)
+  print(violin_facet)
+}
+
+data_agg_zeros_added_450m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==450 & data_agg_zeros_added$count_sum>6),]
+table(data_agg_zeros_added_450m$station_name)
+table(data_agg_zeros_added_450m$station_name_submitting)
+
+data_agg_zeros_added_450m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==450 & data_agg_zeros_added$perc==0),]
+```
+
+```{r}
+#All data is aggregated (so no timebins) to have one det.prob value per station couple. This data set is not used further on, only in this chunk.
+df_ref0_no_timebin <- data_agg_zeros_added%>%
+  dplyr::group_by(station_name_submitting)%>%
+  dplyr::filter(distm == 0)%>%
+  dplyr::summarise(count_sum_ref0=sum(count_sum))
+
+df_no_timebin <- data_agg_zeros_added%>%
+  dplyr::group_by(station_name_submitting,station_name,distm50)%>%
+  dplyr::summarise(count_sum=sum(count_sum))
+
+df_no_timebin2 <- left_join(df_no_timebin,df_ref0_no_timebin, by=c("station_name_submitting"))
+df_no_timebin2$perc=100*df_no_timebin2$count_sum/df_no_timebin2$count_sum_ref0
+
+df_no_timebin2$fdistm50<-as.factor(df_no_timebin2$distm50)
+ggplot(data=df_no_timebin2, aes(x=fdistm50, y=perc))+ 
+    geom_boxplot() 
+ggsave("./figures/Percentage_detections_overview_total.tiff")
+
+ggplot(data=df_no_timebin2, aes(x=fdistm50, y=perc,group=station_name,color=station_name))+ 
+    geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+
+ggplot(data=df_no_timebin2, aes(x=fdistm50, y=perc,group=station_name_submitting,color=station_name_submitting))+ 
+    geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+
+df_no_timebin2_over_station <- df_no_timebin2%>%
+  dplyr::group_by(station_name,fdistm50)%>%
+  dplyr::summarise(perc=mean(perc))
+
+df_no_timebin2_over_station_submitting <- df_no_timebin2%>%
+  dplyr::group_by(station_name_submitting,fdistm50)%>%
+  dplyr::summarise(perc=mean(perc))
+
+ggplot(data=df_no_timebin2_over_station, aes(x=fdistm50, y=perc,group=station_name,color=station_name))+ 
+    geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+
+ggplot(data=df_no_timebin2_over_station_submitting, aes(x=fdistm50, y=perc,group=station_name_submitting,color=station_name_submitting))+ 
+    geom_point()+geom_line() #+ geom_smooth(aes(color=station_name))
+```
+
+```{r}
+ggplot(data=data_agg_zeros_added, aes(x=RecTag, y=perc))+ 
+  geom_boxplot() 
+
+ggplot(data=data_agg_zeros_added, aes(x=fdistm50, y=perc))+ 
+  geom_point() +
+  geom_smooth()+
+  theme_bw()+
+  theme(panel.border = element_blank())+
+  theme(axis.title.x = element_text(colour="black",size=12, face="italic"))+
+  theme(axis.title.y = element_text(colour="black",size=12, face="italic"))+
+  theme(axis.text.x = element_text(size=10, angle=45))+
+  theme(axis.text.y = element_text(size=10))+
+  scale_y_continuous(breaks=seq(0,1,0.1))+
+  xlab('Distance (m)')+
+  ylab('Percentage detections (ReceivingStation SubmittingStation)')
+
+# Boxplot for each distance
+ggplot(data=data_agg_zeros_added, aes(x=fdistm50, y=perc))+ 
+  geom_boxplot() +
+   theme_bw()+
+  theme(panel.border = element_blank())+
+  theme(axis.title.x = element_text(colour="black",size=12, face="italic"))+
+  theme(axis.title.y = element_text(colour="black",size=12, face="italic"))+
+  theme(axis.text.x = element_text(size=10, angle=45))+
+  theme(axis.text.y = element_text(size=10))+
+  scale_y_continuous(breaks=seq(0,1,0.1))+
+  xlab('Distance (m)')+
+  ylab('Percentage detections')
+
+#Violin plot for each distance
+ggplot(data=data_agg_zeros_added, aes(x=fdistm50, y=count_sum))+ 
+  geom_violin() 
+
+distance_facet <-ggplot(data=data_agg_zeros_added, aes(x=timebin, y= perc, color=fdistm50))+
+  geom_line() +
+  facet_wrap(~RecRec)+
+  theme_bw()+
+  theme(panel.border = element_blank())+
+  theme(axis.title.x = element_text(colour="black",size=12, face="italic"))+
+  theme(axis.title.y = element_text(colour="black",size=12, face="italic"))+
+  xlab('Date')+
+  ylab('Percentage detections (Receiving-Submitting)')+
+  theme(strip.background = element_rect(fill = NA, color = NA))+
+  theme(strip.text = element_text(colour="black",size=6, face="bold"))+
+  #scale_color_discrete(name='Distance (m)')+
+  scale_x_datetime(labels=date_format("%Y-%m-%d"),breaks=date_breaks("1 week"))+
+  theme(axis.text.x=element_text(angle=45, hjust = 1, size=6))+
+  theme(axis.text.y=element_text(size=6))
+distance_facet  
+ggsave("./figures/Percentage_detections.tiff")
+
+distance_facet <-ggplot(data=data_agg_zeros_added, aes(x=timebin, y= perc))+
+  geom_line() +
+  facet_wrap(~RecRec)
+distance_facet
+
+distanceplot <-ggplot(data=data_agg_zeros_added, aes(x= fdistm50,y= perc))+geom_line() + geom_jitter(alpha=0.3, color ="red")
+distanceplot
+```
+
+```{r}
+#Are there periods of malfunctioning devices (=many consecutive zero counts at 0m)? 
+data_agg_zeros_added_0m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==0 & data_agg_zeros_added$count_sum==0),] #There are none, so each hour, each station submits and receives at least one if its own signals 
+table(data_agg_zeros_added_0m$RecRec)
+table(data_agg_zeros_added_0m$station_name)
+table(data_agg_zeros_added_0m$station_name_submitting)
+
+data_agg_zeros_added_0m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==0 & data_agg_zeros_added$count_sum==0 & data_agg_zeros_added$station_name_submitting=="Rt8"),]
+```
+
+```{r}
+#How many transmitted detections per hour on average per receiver?
+data_agg_zeros_added_0m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==0),]
+data_agg_zeros_added_0m_per_receiver <- data_agg_zeros_added_0m%>%
+  dplyr::group_by(station_name)%>%
+  dplyr::summarise(perc.mean=mean(perc),perc.sd=sd(perc),count_sum.mean=mean(count_sum),count_sum.sd=sd(count_sum))
+
+for (i in 1:length(unique(data_agg_zeros_added_0m$RecRec))){
+  data_agg_zeros_added_0m.temp<-data_agg_zeros_added_0m[which(data_agg_zeros_added_0m$RecRec==unique(data_agg_zeros_added_0m$RecRec)[i]),]
+  hist(data_agg_zeros_added_0m.temp$count_sum,main=paste("number of submitted signals per hour",unique(data_agg_zeros_added_0m$RecRec)[i]))
+}
+
+#For all plots can be seen that there are some clear outliers with low values. These low values take place at the start and the end of the (filtered study period). Because the receivers did not start and stop perfectly at the hour, the last and first hour bin will have lower values. It is best to remove these from the data set as they will cause unwanted outliers that are the results of data procesing (next line)
+
+data_agg_zeros_added=data_agg_zeros_added[-which(data_agg_zeros_added$timebin==as.POSIXct("2020-03-01 12:00:00",tz="utc")),]
+data_agg_zeros_added=data_agg_zeros_added[-which(data_agg_zeros_added$timebin==as.POSIXct("2020-04-27 12:00:00",tz="utc")),]
+
+#Ok, so after removing these outliers, lets check the data and plots again ...
+
+data_agg_zeros_added_0m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==0),]
+data_agg_zeros_added_0m_per_receiver <- data_agg_zeros_added_0m%>%
+  dplyr::group_by(station_name)%>%
+  dplyr::summarise(perc.mean=mean(perc),perc.sd=sd(perc),count_sum.mean=mean(count_sum),count_sum.sd=sd(count_sum))
+
+for (i in 1:length(unique(data_agg_zeros_added_0m$RecRec))){
+  data_agg_zeros_added_0m.temp<-data_agg_zeros_added_0m[which(data_agg_zeros_added_0m$RecRec==unique(data_agg_zeros_added_0m$RecRec)[i]),]
+  hist(data_agg_zeros_added_0m.temp$count_sum,main=paste("number of submitted signals per hour",unique(data_agg_zeros_added_0m$RecRec)[i]))
+}
+
+#That looks better :-)
+```
+
+```{r}
+#couple the env measurements of the receiving stations to the detection data of the stations
+data_agg_zeros_added<-left_join(data_agg_zeros_added,subset(env.rec,select=-c(station_name)),by=c("timebin","Rec"))
+#couple the env measurements of the submitting stations to the detection data of the stations
+env.rec.submitting<-env.rec
+colnames(env.rec.submitting)=paste(colnames(env.rec.submitting),"_submitting",sep="")
+env.rec.submitting$timebin=env.rec.submitting$timebin_submitting
+env.rec.submitting$timebin_submitting<-NULL
+data_agg_zeros_added<-left_join(data_agg_zeros_added,env.rec.submitting[,c("timebin","Average_noise_submitting","Tilt_angle_submitting","Temperature_submitting","signal.to.noise_submitting","station_name_submitting","sea_depth_submitting")],by=c("timebin","station_name_submitting"))
+```
+
+```{r}
+#Waterstand Schoonaarde (per minuut: hoogste resolutie)
+tij.schoonaarde<-read.table("./data/external/env/env/Schoonaarde tij_Waterpeil getij/Schoonaarde tij_Waterpeil getij.csv",sep=";",col.names = c("datetime","water.height.schoonaarde","check","abs","AVQ"))[,c(1:3)]
+tij.schoonaarde$water.height.schoonaarde<-as.numeric(gsub(",",".",tij.schoonaarde$water.height.schoonaarde))
+tij.schoonaarde<-time.cleanup.waterinfo(tij.schoonaarde)
+data_agg_zeros_added<-left_join(data_agg_zeros_added,tij.schoonaarde[,c("timebin","water.height.schoonaarde")],by="timebin")
+```
+
+```{r}
+#Waterstand Melle
+tij.melle<-read.table("./data/external/env/env/Melle tij_Waterpeil getij/Melle tij_Waterpeil getij.csv",sep=";",col.names = c("datetime","water.height.melle","check","abs","AVQ"))[,c(1:3)]
+tij.melle$water.height.melle<-as.numeric(gsub(",",".",tij.melle$water.height.melle))
+tij.melle<-time.cleanup.waterinfo(tij.melle)
+data_agg_zeros_added<-left_join(data_agg_zeros_added,tij.melle[,c("timebin","water.height.melle")],by="timebin")
+```
+
+```{r}
+#HWLW Schoonaarde (time of lowest/heighest water level in tidal cycle + water level itself)
+HWLW.schoonaarde<-read.table("./data/external/env/env/Schoonaarde tij_Waterpeil getij_HWLW/Schoonaarde tij_Waterpeil getij_HWLW.csv",sep=";",col.names = c("datetime","HWLW.schoonaarde","check","abs","AVQ"))[,c(1:3)]
+HWLW.schoonaarde$HWLW.schoonaarde<-as.numeric(gsub(",",".",HWLW.schoonaarde$HWLW.schoonaarde))
+HWLW.schoonaarde<-time.cleanup.waterinfo(HWLW.schoonaarde)
+HWLW.schoonaarde<-HWLW.schoonaarde %>%
+  arrange(timebin) %>%
+  mutate(tidal.range.HWLW.schoonaarde = HWLW.schoonaarde - lag(HWLW.schoonaarde)) #Tidal range is the difference in water level between the most nearest (in time) lowest and highest water level 
+HWLW.schoonaarde$class.HWLW.schoonaarde<-NA
+HWLW.schoonaarde$class.HWLW.schoonaarde[which(HWLW.schoonaarde$tidal.range.HWLW.schoonaarde<0)]="LW"
+HWLW.schoonaarde$class.HWLW.schoonaarde[which(HWLW.schoonaarde$tidal.range.HWLW.schoonaarde>0)]="HW"
+HWLW.schoonaarde$timebin.HWLW=HWLW.schoonaarde$timebin #new variable because we want to maintain the moment of high and low water in the final data set.
+
+HWLW.schoonaarde<-as.data.table(HWLW.schoonaarde[,c("HWLW.schoonaarde","timebin","tidal.range.HWLW.schoonaarde","class.HWLW.schoonaarde","timebin.HWLW")])
+data_agg_zeros_added.unique.timebins<-as.data.table(unique(data_agg_zeros_added$timebin)) # data tables allow for some nice functions to be used to link data based on timestamps (nearest, forward roll or backward roll) 
+colnames(data_agg_zeros_added.unique.timebins)="timebin"
+
+setkey(HWLW.schoonaarde,timebin) #Data will be linked based on the timebin variable
+setkey(data_agg_zeros_added.unique.timebins,timebin)
+
+combined.prior<-HWLW.schoonaarde[data_agg_zeros_added.unique.timebins,roll=+Inf] #Forward rolling
+combined.post<-HWLW.schoonaarde[data_agg_zeros_added.unique.timebins,roll=-Inf] #Backward rolling
+
+combined.prior$timedif.HWLW.mins<-difftime(combined.prior$timebin.HWLW,combined.prior$timebin,units = c( "mins"),tz="utc")
+combined.post$timedif.HWLW.mins<-difftime(combined.post$timebin.HWLW,combined.post$timebin,units = c( "mins"),tz="utc")
+
+colnames(combined.prior) <- paste(colnames(combined.prior),"prior",sep = "_") #Rename variables to distinguishe between prior and post HWLW-variables
+combined.prior$timebin<-combined.prior$timebin_prior
+combined.prior$timebin_prior<-NULL
+colnames(combined.post) <- paste(colnames(combined.post),"post",sep = "_")
+combined.post$timebin<-combined.post$timebin_post
+combined.post$timebin_post<-NULL
+
+data_agg_zeros_added<-left_join(data_agg_zeros_added,combined.prior,by="timebin")
+data_agg_zeros_added<-left_join(data_agg_zeros_added,combined.post,by="timebin")
+
+data_agg_zeros_added$tidal.phase<-NA
+
+data_agg_zeros_added$tidal.phase[which(data_agg_zeros_added$class.HWLW.schoonaarde_prior=="LW" & data_agg_zeros_added$class.HWLW.schoonaarde_post=="HW")]="flood"
+
+data_agg_zeros_added$tidal.phase[which(data_agg_zeros_added$class.HWLW.schoonaarde_prior=="HW" & data_agg_zeros_added$class.HWLW.schoonaarde_post=="LW")]="ebb"
+
+data_agg_zeros_added$tidal.phase[which(data_agg_zeros_added$class.HWLW.schoonaarde_prior=="LW" & data_agg_zeros_added$class.HWLW.schoonaarde_post=="LW")]="kentering"
+
+data_agg_zeros_added$tidal.phase[which(data_agg_zeros_added$class.HWLW.schoonaarde_prior=="HW" & data_agg_zeros_added$class.HWLW.schoonaarde_post=="HW")]="kentering"
+
+data_agg_zeros_added$tidal.range.HWLW.schoonaarde<-abs(data_agg_zeros_added$tidal.range.HWLW.schoonaarde_post-data_agg_zeros_added$tidal.range.HWLW.schoonaarde_prior)
+```
+
+```{r}
+#Determine the period of ebb and/or flood (in minutes) of each hour interval
+data_agg_zeros_added$ebb.period<-NA
+data_agg_zeros_added$flood.period<-NA
+# length(which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30))
+# length(which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)==0 & abs(data_agg_zeros_added$timedif.HWLW.mins_post)==0))
+# length(which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30))
+# length(which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="ebb"))
+# length(which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="flood"))
+
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)>=30 & abs(data_agg_zeros_added$timedif.HWLW.mins_prior)>=30 & data_agg_zeros_added$tidal.phase=="flood")]=60
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)>=30 &  abs(data_agg_zeros_added$timedif.HWLW.mins_prior)>=30 & data_agg_zeros_added$tidal.phase=="flood")]=0
+
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)>=30 & abs(data_agg_zeros_added$timedif.HWLW.mins_prior)>=30 & data_agg_zeros_added$tidal.phase=="ebb")]=0
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)>=30 & abs(data_agg_zeros_added$timedif.HWLW.mins_prior)>=30 & data_agg_zeros_added$tidal.phase=="ebb")]=60
+
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)==0 & abs(data_agg_zeros_added$timedif.HWLW.mins_post)==0)]=30
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)==0 & abs(data_agg_zeros_added$timedif.HWLW.mins_post)==0)]=30
+
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="flood")]=30+data_agg_zeros_added$timedif.HWLW.mins_post[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="flood")]
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="flood")]=60-data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="flood")]
+
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="ebb")]=30+data_agg_zeros_added$timedif.HWLW.mins_post[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="ebb")]
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="ebb")]=60-data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_post)<30 & data_agg_zeros_added$tidal.phase=="ebb")]
+
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="flood")]=30+data_agg_zeros_added$timedif.HWLW.mins_prior[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="flood")]
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="flood")]=60-data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="flood")]
+
+data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="ebb")]=30+data_agg_zeros_added$timedif.HWLW.mins_prior[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="ebb")]
+data_agg_zeros_added$ebb.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="ebb")]=60-data_agg_zeros_added$flood.period[which(abs(data_agg_zeros_added$timedif.HWLW.mins_prior)<30 & data_agg_zeros_added$tidal.phase=="ebb")]
+```
+
+```{r}
+#Conductiviteit Schellebelle (per 5 minuten, hoogste resolutie)
+cond.schellebelle<-read.table("./data/external/env/env/Schellebelle SF_Conductiviteit/Schellebelle SF_Conductiviteit.csv",sep=";",col.names = c("datetime","cond.schellebelle","check","abs","AVQ"))[,c(1:3)] #µS/cm
+cond.schellebelle<-time.cleanup.waterinfo(cond.schellebelle)
+cond.schellebelle.median<-cond.schellebelle
+cond.schellebelle.median$timebin<-round_date(cond.schellebelle.median$timebin,"hours")
+cond.schellebelle.median <- cond.schellebelle%>% #Take the median to have one measurement per hour. Preferred over using the mean to limit the effect outliers might have
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(cond.schellebelle=median(cond.schellebelle))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,cond.schellebelle.median[,c("timebin","cond.schellebelle")],by="timebin")
+```
+
+```{r}
+#Turbiditeit Schellebelle (per 5 minuten, hoogste resolutie)
+turb.schellebelle<-read.table("./data/external/env/env/Schellebelle SF_Turbiditeit_NTU_YSI/Schellebelle SF_Turbiditeit_NTU_YSI.csv",sep=";",col.names = c("datetime","turb.schellebelle","check","abs","AVQ"))[,c(1:3)]
+turb.schellebelle<-time.cleanup.waterinfo(turb.schellebelle)
+turb.schellebelle.median<-turb.schellebelle
+turb.schellebelle.median$timebin<-round_date(turb.schellebelle.median$timebin,"hours")
+turb.schellebelle.median <- turb.schellebelle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(turb.schellebelle=median(turb.schellebelle))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,turb.schellebelle.median[,c("timebin","turb.schellebelle")],by="timebin")
+```
+
+```{r}
+#watertemperatuur Schellebelle (per 5 minuten, hoogste resolutie)
+temp.schellebelle<-read.table("./data/external/env/env/Schellebelle SF_Watertemperatuur/Schellebelle SF_Watertemperatuur.csv",sep=";",col.names = c("datetime","temp.schellebelle","check","abs","AVQ"))[,c(1:3)]
+temp.schellebelle$temp.schellebelle<-as.numeric(gsub(",",".",temp.schellebelle$temp.schellebelle))
+temp.schellebelle<-time.cleanup.waterinfo(temp.schellebelle)
+temp.schellebelle.median<-temp.schellebelle
+temp.schellebelle.median$timebin<-round_date(temp.schellebelle.median$timebin,"hours")
+temp.schellebelle.median <- temp.schellebelle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(temp.schellebelle=median(temp.schellebelle))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,temp.schellebelle.median[,c("timebin","temp.schellebelle")],by="timebin")
+```
+
+```{r}
+#O2 Schellebelle (per 5 minuten, hoogste resolutie)
+O2.schellebelle<-read.table("./data/external/env/env/Schellebelle SF_Zuurstofgehalte/Schellebelle SF_Zuurstofgehalte.csv",sep=";",col.names = c("datetime","O2.schellebelle","check","abs","AVQ"))[,c(1:3)]
+O2.schellebelle$O2.schellebelle<-as.numeric(gsub(",",".",O2.schellebelle$O2.schellebelle))
+O2.schellebelle<-time.cleanup.waterinfo(O2.schellebelle)
+O2.schellebelle.median<-O2.schellebelle
+O2.schellebelle.median$timebin<-round_date(O2.schellebelle.median$timebin,"hours")
+O2.schellebelle.median <- O2.schellebelle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(O2.schellebelle=median(O2.schellebelle))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,O2.schellebelle.median[,c("timebin","O2.schellebelle")],by="timebin")
+```
+
+```{r}
+#pH Schellebelle (per 5 minuten, hoogste resolutie)
+pH.schellebelle<-read.table("./data/external/env/env/Schellebelle SF_pH/Schellebelle SF_pH.csv",sep=";",col.names = c("datetime","pH.schellebelle","check","abs","AVQ"))[,c(1:3)]
+pH.schellebelle$pH.schellebelle<-as.numeric(gsub(",",".",pH.schellebelle$pH.schellebelle))
+pH.schellebelle<-time.cleanup.waterinfo(pH.schellebelle)
+pH.schellebelle.median<-pH.schellebelle
+pH.schellebelle.median$timebin<-round_date(pH.schellebelle.median$timebin,"hours")
+pH.schellebelle.median <- pH.schellebelle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(pH.schellebelle=median(pH.schellebelle))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,pH.schellebelle.median[,c("timebin","pH.schellebelle")],by="timebin")
+```
+
+```{r eval=FALSE}
+#neerslag Zele (uurtotaal van voorbije uur)
+neerslag.zele<-read.table("./data/external/env/env/Zele OTT_P_Neerslag/Zele OTT_P_Neerslag.csv",sep=";",col.names = c("datetime","neerslag.zele","check","abs","AVQ"))[,c(1:3)]
+neerslag.zele$neerslag.zele<-as.numeric(gsub(",",".",neerslag.zele$neerslag.zele))
+neerslag.zele<-time.cleanup.waterinfo(neerslag.zele)
+#Within the study period there is only 1 missing value in the neerslag data set and it is before and after multiple measurements of 0. Hence choosing the value zero to replace NA is appropriate.
+neerslag.zele$neerslag.zele[which(is.na(neerslag.zele$neerslag.zele)==TRUE)]=0
+data_agg_zeros_added<-left_join(data_agg_zeros_added,neerslag.zele[,c("timebin","neerslag.zele")],by="timebin")
+```
+
+```{r}
+#neerslag Zele (per 5 minuten, hoogste resolutie) 
+neerslag.zele<-read.table("./data/external/env/env/Zele OTT_P_Neerslag_5min/Zele OTT_P_Neerslag.csv",sep=";",col.names = c("datetime","neerslag.zele","check","abs","AVQ"))[,c(1:3)]
+#Within the study period there are only a few missing values in the neerslag data set and it is before and after multiple measurements of 0. Hence choosing the value zero to replace NA is appropriate.
+neerslag.zele$neerslag.zele[which(is.na(neerslag.zele$neerslag.zele)==TRUE)]=0
+neerslag.zele$neerslag.zele<-as.numeric(gsub(",",".",neerslag.zele$neerslag.zele))
+neerslag.zele<-time.cleanup.waterinfo(neerslag.zele)
+neerslag.zele.median<-neerslag.zele
+neerslag.zele.median$timebin<-round_date(neerslag.zele.median$timebin,"hours")
+neerslag.zele.median <- neerslag.zele.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(neerslag.zele=median(neerslag.zele))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,neerslag.zele.median[,c("timebin","neerslag.zele")],by="timebin")
+```
+
+```{r}
+#neerslag Zele (per 5 minuten, hoogste resolutie) 
+neerslag.zele.5min<-read.table("./data/external/env/env/Zele OTT_P_Neerslag_5min/Zele OTT_P_Neerslag.csv",sep=";",col.names = c("datetime","neerslag.zele.5min","check","abs","AVQ"))[,c(1:3)]
+#Within the study period there are only a few missing values in the neerslag data set and it is before and after multiple measurements of 0. Hence choosing the value zero to replace NA is appropriate.
+neerslag.zele.5min$neerslag.zele.5min[which(is.na(neerslag.zele.5min$neerslag.zele.5min)==TRUE)]=0
+neerslag.zele.5min$neerslag.zele.5min<-as.numeric(gsub(",",".",neerslag.zele.5min$neerslag.zele.5min))
+neerslag.zele.5min<-time.cleanup.waterinfo(neerslag.zele.5min)
+```
+
+```{r eval=FALSE}
+#Debiet en getij Melle - hoge resolutie: Voor Onderzoek relatie check "./source/Waterinfo_Q_and_waterlevel_melle_study_relationship.R"
+q.melle.5min<-read.table("./data/external/env/env/Melle tij relatie waterpeil en afvoer/Melle tij_Afvoer/Melle tij_Afvoer.csv",sep=";",col.names = c("datetime","q.melle.5min","check","abs","AVQ"))[,c(1:3)] 
+q.melle.5min$q.melle.5min<-as.numeric(gsub(",",".",q.melle.5min$q.melle.5min))
+q.melle.5min<-time.cleanup.waterinfo(q.melle.5min)
+#To account for delay in q.melle data in relation to q schoonaarde (see HIC source file)
+
+ACF="FALSE"
+RF="FALSE"
+RM="TRUE"
+
+if (ACF==TRUE){
+  q.melle.5min$timebin=q.melle.5min$timebin-20*60
+}
+if (RM==TRUE){
+  load("./models/model_HIC.Rdata")
+  q.melle.5min$timebin=q.melle.5min$timebin
+  q.melle.5min$q.melle=q.melle.5min$q.melle.5min
+  q.melle.5min<-left_join(q.melle.5min,tij.melle[,c("timebin","water.height.melle")],by="timebin")
+  q.melle.5min<-left_join(q.melle.5min,tij.schoonaarde[,c("timebin","water.height.schoonaarde")],by="timebin")
+  q.melle.5min<-q.melle.5min[-nrow(q.melle.5min),]
+  q.melle.5min$water.height.melle <- na.approx(q.melle.5min$water.height.melle)  
+  
+  q.melle.5min$water.height.melle.diff=q.melle.5min$water.height.melle-lag(q.melle.5min$water.height.melle)
+  q.melle.5min$tidal.phase.melle=NA
+  q.melle.5min$tidal.phase.melle[which(q.melle.5min$water.height.melle.diff<=0)]="ebb"
+  q.melle.5min$tidal.phase.melle[which(q.melle.5min$water.height.melle.diff>0)]="flood"
+  q.melle.5min$current.direction.melle=NA
+  q.melle.5min$current.direction.melle[which(q.melle.5min$q.melle<=0)]="upstream"
+  q.melle.5min$current.direction.melle[which(q.melle.5min$q.melle>0)]="downstream"
+  
+  q.melle.5min$water.height.schoonaarde.diff=q.melle.5min$water.height.schoonaarde-lag(q.melle.5min$water.height.schoonaarde)
+  q.melle.5min$tidal.phase.schoonaarde=NA
+  q.melle.5min$tidal.phase.schoonaarde[which(q.melle.5min$water.height.schoonaarde.diff<=0)]="ebb"
+  q.melle.5min$tidal.phase.schoonaarde[which(q.melle.5min$water.height.schoonaarde.diff>0)]="flood"
+  
+  q.melle.5min$q.melle.5min<-predict(model_HIC,q.melle.5min)
+}
+
+tij.melle.10min<-read.table("./data/external/env/env/Melle tij relatie waterpeil en afvoer/Melle tij_Waterpeil/Melle tij_Waterpeil getij.csv",sep=";",col.names = c("datetime","tij.melle.10min","check","abs","AVQ"))[,c(1:3)] 
+tij.melle.10min$tij.melle.10min<-as.numeric(gsub(",",".",tij.melle.10min$tij.melle.10min))
+tij.melle.10min<-time.cleanup.waterinfo(tij.melle.10min)
+
+plot(data_agg_zeros_added$water.height.melle,data_agg_zeros_added$q.melle)
+plot(data_agg_zeros_added$water.height.melle,data_agg_zeros_added$water.height.schoonaarde)
+
+#Afvoer Melle (15 min delay afvoer is beste proy voor debiet Schoonaarde: check "./source/HIC_Q_simulation.R")
+# q.melle<-read.table("./data/external/env/env/Melle tij_Afvoer/Melle tij_Afvoer.csv",sep=";",col.names = c("datetime","q.melle","check","abs","AVQ"))[,c(1:3)] 
+# q.melle$q.melle<-as.numeric(gsub(",",".",q.melle$q.melle))
+# q.melle<-time.cleanup.waterinfo(q.melle)
+q.melle=q.melle.5min
+q.melle.median<-q.melle
+q.melle.median$timebin<-round_date(q.melle.median$timebin,"hours")
+q.melle.median <- q.melle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(q.melle=median(q.melle.5min),q.melle.magn=median(abs(q.melle.5min)))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,q.melle.median[,c("timebin","q.melle","q.melle.magn")],by="timebin")
+```
+
+```{r}
+q.melle.5min<-read_excel("./data/external/env/env/HIC/22_I_095_v_Schoonaarde.xlsx")[,c(1,3)] 
+colnames(q.melle.5min)=c("datetime","q.melle.5min")
+q.melle.5min$datetime=paste(q.melle.5min$datetime,"+0100",sep=" ")
+q.melle.5min$timebin<-as.POSIXct(q.melle.5min$datetime,format='%Y-%m-%d %H:%M:%S %z')
+attributes(q.melle.5min$timebin)$tzone <- "UTC" 
+q.melle.5min$datetime<-NULL
+
+q.melle.median<-q.melle.5min
+q.melle.median$timebin<-round_date(q.melle.median$timebin,"hours")
+q.melle.median <- q.melle.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(q.melle=median(q.melle.5min),q.melle.magn=median(abs(q.melle.5min)))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,q.melle.median[,c("timebin","q.melle","q.melle.magn")],by="timebin")
+```
+
+```{r}
+#Windsnelheid Liedekerke (per 15 minuten, hoogste resolutie) 
+wind.v.liedekerke<-read.table("./data/external/env/env/Liedekerke_ME_Windsnelheid/Liedekerke_ME_Windsnelheid.csv",sep=";",col.names = c("datetime","wind.v.liedekerke","check","abs","AVQ"))[,c(1:3)] 
+wind.v.liedekerke$wind.v.liedekerke<-as.numeric(gsub(",",".",wind.v.liedekerke$wind.v.liedekerke))
+wind.v.liedekerke<-time.cleanup.waterinfo(wind.v.liedekerke)
+wind.v.liedekerke.median<-wind.v.liedekerke
+wind.v.liedekerke.median$timebin<-round_date(wind.v.liedekerke.median$timebin,"hours")
+wind.v.liedekerke.median <- wind.v.liedekerke.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(wind.v.liedekerke=median(wind.v.liedekerke))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,wind.v.liedekerke.median[,c("timebin","wind.v.liedekerke")],by="timebin")
+data_agg_zeros_added$wind.v.stress.liedekerke<-0.0016*((data_agg_zeros_added$wind.v.liedekerke)^2) #Loher,2017
+
+#Windrichting Liedekerke (°tov Noorden) (per 15 minuten, hoogste resolutie) 
+wind.r.liedekerke<-read.table("./data/external/env/env/Liedekerke_ME_Windrichting/Liedekerke_ME_Windrichting.csv",sep=";",col.names = c("datetime","wind.r.liedekerke","check","abs","AVQ"))[,c(1:3)] 
+wind.r.liedekerke$wind.r.liedekerke<-as.numeric(gsub(",",".",wind.r.liedekerke$wind.r.liedekerke))
+wind.r.liedekerke<-time.cleanup.waterinfo(wind.r.liedekerke)
+wind.r.liedekerke.median<-wind.r.liedekerke
+wind.r.liedekerke.median$timebin<-round_date(wind.r.liedekerke.median$timebin,"hours")
+wind.r.liedekerke.median <- wind.r.liedekerke.median%>%
+  dplyr::group_by(timebin)%>%
+  dplyr::summarise(wind.r.liedekerke=median(wind.r.liedekerke))
+data_agg_zeros_added<-left_join(data_agg_zeros_added,wind.r.liedekerke.median[,c("timebin","wind.r.liedekerke")],by="timebin")
+```
+
+```{r eval=FALSE}
+#Create interactive plot of det.prob for specific receivere couple through time
+data_agg_zeros_added_150m<-data_agg_zeros_added[which(data_agg_zeros_added$distm50==250 & data_agg_zeros_added$RecRec=="Rt4 Rt2"),]
+data_agg_zeros_added_150m <- filter(data_agg_zeros_added_150m,timebin>=as.POSIXct("2020-03-01 01:00:00",tz="UTC"),timebin<as.POSIXct("2020-03-14 01:00:00",tz="UTC"))
+
+p <- data_agg_zeros_added_150m %>%
+  ggplot( aes(x=timebin, y=perc)) +
+    geom_area(fill="#69b3a2", alpha=0.5) +
+    geom_line(color="#69b3a2") +
+    ylab("Det.Prob") +
+    theme_ipsum() + geom_line(aes(x=timebin, y=water.height.schoonaarde))
+
+p <- ggplotly(p)
+p
+```
+
+```{r}
+submitting_stations=RecTag$station_name_submitting
+for (i in 1:length(submitting_stations)){
+  databin.test<-databin[which(databin$station_name_submitting==submitting_stations[i]),]
+  databin.test_0m<-databin.test[which(databin.test$distm50==0),]
+  
+  databin.test<-as.data.table(databin.test)
+  databin.test_0m<-as.data.table(databin.test_0m$date_time)
+  colnames(databin.test_0m)="date_time"
+  databin.test_0m$date_time_0m<-databin.test_0m$date_time
+  
+  setkey(databin.test,date_time)
+  setkey(databin.test_0m,date_time)
+  
+  databin.test<-databin.test_0m[databin.test,roll="nearest"]
+  databin.test$timedif<-difftime(databin.test$date_time,databin.test$date_time_0m,units = c( "secs"),tz="utc")
+  
+  databin.test$counts[which(abs(databin.test$timedif)>60)]=NA
+  
+  RecTag.test=read_excel("./data/external/telemetry/RecTag.xlsx")#Previously I used unique(databin.test$station_name_submitting), but for Rt8 some receivers were never met, better to use the stations of rectag df
+  
+  x=as.data.frame(expand.grid(station_name=unique(RecTag.test$station_name_submitting),station_name_submitting=submitting_stations[i],date_time_0m=unique(databin.test_0m$date_time_0m))) #create a new dataframe of all possible combinations (so also those that are not present in data_agg (these missing values will be the zeros that need to be pasted in data_agg))
+  
+  x$RecRec=paste(x$station_name,x$station_name_submitting) #finetune x
+  x$counts=0
+  x$RecRecTime=paste(x$RecRec,x$date_time_0m,sep="_")
+  
+  databin.test$RecRecTime<-paste(databin.test$RecRec,databin.test$date_time_0m,sep="_")
+  
+  z=x[-which(x$RecRecTime %in% databin.test$RecRecTime),] #Select the values that are present in x, but not in data_agg
+  
+  databin.test_zeros_added=rbind(databin.test[,c("station_name","station_name_submitting","RecRec","date_time_0m","counts")],z[,c("station_name","station_name_submitting","RecRec","date_time_0m","counts")])#These values are pasted to data_agg to serve as zero values
+  
+  env.rec.temp=env.rec[which(env.rec$station_name==submitting_stations[i]),]
+  env.rec.temp$date_time_0m=env.rec.temp$timebin
+  env.rec.temp.table<-as.data.table(env.rec.temp)
+  env.rec.temp.table=env.rec.temp.table[,c("Average_noise","Temperature","Tilt_angle","sea_depth","date_time_0m")]
+  colnames(env.rec.temp.table) <- paste(colnames(env.rec.temp.table),"submitting",sep = "_")
+  env.rec.temp.table$date_time_0m=env.rec.temp.table$date_time_0m_submitting
+  env.rec.temp.table$date_time_0m_submitting<-NULL
+  setkey(env.rec.temp.table,date_time_0m)
+  setkey(databin.test_zeros_added,date_time_0m)
+  databin.test_zeros_added<-env.rec.temp.table[databin.test_zeros_added,roll="nearest"]
+  
+  if (i==1){databin.test_zeros_added_final=databin.test_zeros_added} else{databin.test_zeros_added_final=rbind(databin.test_zeros_added_final,databin.test_zeros_added)}
+}
+```
+
+```{r}
+#Check for false positives
+databin.test_zeros_added_final$date_time_0m_RecRec<-paste(databin.test_zeros_added_final$date_time_0m,databin.test_zeros_added_final$RecRec,sep="_")
+length(unique(databin.test_zeros_added_final$date_time_0m_RecRec))
+databin.test_zeros_added_final[duplicated(databin.test_zeros_added_final$date_time_0m_RecRec),]#only two duplicates at end of sampling (these are removed in the following line). Hence there is no need to correct for false positive in the data_agg dataset
+databin.test_zeros_added_final<-databin.test_zeros_added_final%>%distinct(date_time_0m_RecRec,.keep_all=TRUE)
+```
+
+```{r}
+env.rec.temp=env.rec
+env.rec.temp$date_time_0m=env.rec.temp$timebin
+env.rec.temp.table<-as.data.table(env.rec.temp)
+env.rec.temp.table=env.rec.temp.table[,c("Average_noise","Temperature","Tilt_angle","sea_depth","date_time_0m","station_name")]
+colnames(env.rec.temp.table) <- paste(colnames(env.rec.temp.table),"receiving",sep = "_")
+env.rec.temp.table$date_time_0m=env.rec.temp.table$date_time_0m_receiving
+env.rec.temp.table$date_time_0m_receiving<-NULL
+env.rec.temp.table$station_name=env.rec.temp.table$station_name_receiving
+env.rec.temp.table$station_name_receiving<-NULL
+setkey(env.rec.temp.table,station_name,date_time_0m)
+setkey(databin.test_zeros_added_final,station_name,date_time_0m)
+databin.test_zeros_added_final<-env.rec.temp.table[databin.test_zeros_added_final,roll="nearest"]
+```
+
+```{r}
+databin.test_zeros_added_final<-left_join(databin.test_zeros_added_final,distREC.long[,c("RecRec","distm")],by="RecRec")
+databin.test_zeros_added_final$distm50<-round(databin.test_zeros_added_final$distm/50)*50 #Round the distance value to the closest 50-step value (0,50,100,150,etc.)
+databin.test_zeros_added_final$fdistm50<-as.factor(databin.test_zeros_added_final$distm50)
+```
+
+```{r}
+#1min data
+env.1min=tij.schoonaarde[,c("water.height.schoonaarde","timebin")]
+env.1min$date_time_0m<-env.1min$timebin
+env.1min$timebin<-NULL
+#5min data
+env.5min=left_join(O2.schellebelle[,c("O2.schellebelle","timebin")],turb.schellebelle[,c("turb.schellebelle","timebin")],by="timebin")
+env.5min=left_join(env.5min,pH.schellebelle[,c("pH.schellebelle","timebin")],by="timebin")
+env.5min=left_join(env.5min,temp.schellebelle[,c("temp.schellebelle","timebin")],by="timebin")
+env.5min=left_join(env.5min,cond.schellebelle[,c("cond.schellebelle","timebin")],by="timebin")
+env.5min=left_join(env.5min,neerslag.zele.5min[,c("neerslag.zele.5min","timebin")],by="timebin")
+#env.5min=left_join(env.5min,q.melle.5min[,c("q.melle.5min","timebin")],by="timebin")
+env.5min$date_time_0m<-env.5min$timebin
+env.5min$timebin<-NULL
+#10min data
+env.10min=q.melle.5min[,c("q.melle.5min","timebin")]
+env.10min$date_time_0m<-env.10min$timebin
+env.10min$timebin<-NULL
+#15min data
+env.15min=left_join(wind.v.liedekerke[,c("wind.v.liedekerke","timebin")],wind.r.liedekerke[,c("wind.r.liedekerke","timebin")],by="timebin")
+env.15min$date_time_0m<-env.15min$timebin
+env.15min$timebin<-NULL
+
+databin.test_zeros_added_final<-as.data.table(databin.test_zeros_added_final)
+env.1min<-as.data.table(env.1min)
+env.5min<-as.data.table(env.5min)
+env.10min<-as.data.table(env.10min)
+env.15min<-as.data.table(env.15min)
+
+setkey(databin.test_zeros_added_final,date_time_0m)
+setkey(env.1min,date_time_0m)
+setkey(env.5min,date_time_0m)
+setkey(env.10min,date_time_0m)
+setkey(env.15min,date_time_0m)
+
+databin.test_zeros_added_final<-env.1min[databin.test_zeros_added_final,roll="nearest"]
+databin.test_zeros_added_final<-env.5min[databin.test_zeros_added_final,roll="nearest"]
+databin.test_zeros_added_final<-env.10min[databin.test_zeros_added_final,roll="nearest"]
+databin.test_zeros_added_final<-env.15min[databin.test_zeros_added_final,roll="nearest"]
+```
+
+```{r}
+HWLW.schoonaarde$date_time_0m<-HWLW.schoonaarde$timebin
+HWLW.schoonaarde<-as.data.table(HWLW.schoonaarde[,c("HWLW.schoonaarde","date_time_0m","tidal.range.HWLW.schoonaarde","class.HWLW.schoonaarde","timebin.HWLW")])
+
+databin.test_zeros_added_final.timebins<-as.data.table(unique(databin.test_zeros_added_final$date_time_0m))
+colnames(databin.test_zeros_added_final.timebins)="date_time_0m"
+
+setkey(HWLW.schoonaarde,date_time_0m)
+setkey(databin.test_zeros_added_final.timebins,date_time_0m)
+
+combined.prior<-HWLW.schoonaarde[databin.test_zeros_added_final.timebins,roll=+Inf]
+combined.post<-HWLW.schoonaarde[databin.test_zeros_added_final.timebins,roll=-Inf]
+
+combined.prior$timedif.HWLW.mins<-difftime(combined.prior$timebin.HWLW,combined.prior$date_time_0m,units = c( "mins"),tz="utc")
+combined.post$timedif.HWLW.mins<-difftime(combined.post$timebin.HWLW,combined.post$date_time_0m,units = c( "mins"),tz="utc")
+
+colnames(combined.prior) <- paste(colnames(combined.prior),"prior",sep = "_")
+combined.prior$date_time_0m<-combined.prior$date_time_0m_prior
+combined.prior$date_time_0m_prior<-NULL
+colnames(combined.post) <- paste(colnames(combined.post),"post",sep = "_")
+combined.post$date_time_0m<-combined.post$date_time_0m_post
+combined.post$date_time_0m_post<-NULL
+
+databin.test_zeros_added_final<-left_join(databin.test_zeros_added_final,combined.prior,by="date_time_0m")
+databin.test_zeros_added_final<-left_join(databin.test_zeros_added_final,combined.post,by="date_time_0m")
+
+databin.test_zeros_added_final$tidal.phase<-NA
+
+databin.test_zeros_added_final$tidal.phase[which(databin.test_zeros_added_final$class.HWLW.schoonaarde_prior=="LW" & databin.test_zeros_added_final$class.HWLW.schoonaarde_post=="HW")]="flood"
+
+databin.test_zeros_added_final$tidal.phase[which(databin.test_zeros_added_final$class.HWLW.schoonaarde_prior=="HW" & databin.test_zeros_added_final$class.HWLW.schoonaarde_post=="LW")]="ebb"
+
+databin.test_zeros_added_final$tidal.phase[which(databin.test_zeros_added_final$class.HWLW.schoonaarde_prior=="LW" & databin.test_zeros_added_final$class.HWLW.schoonaarde_post=="LW")]="kentering"
+
+databin.test_zeros_added_final$tidal.phase[which(databin.test_zeros_added_final$class.HWLW.schoonaarde_prior=="HW" & databin.test_zeros_added_final$class.HWLW.schoonaarde_post=="HW")]="kentering"
+
+databin.test_zeros_added_final$tidal.range.HWLW.schoonaarde<-abs(databin.test_zeros_added_final$tidal.range.HWLW.schoonaarde_post-databin.test_zeros_added_final$tidal.range.HWLW.schoonaarde_prior)
+```
+
+```{r}
+databin.test_zeros_added_final$signal.direction=NA
+databin.test_zeros_added_final$signal.direction[which(as.numeric(substr(databin.test_zeros_added_final$station_name_submitting,3,3))==as.numeric(substr(databin.test_zeros_added_final$station_name,3,3)))]=0
+databin.test_zeros_added_final$signal.direction[which(as.numeric(substr(databin.test_zeros_added_final$station_name_submitting,3,3))>as.numeric(substr(databin.test_zeros_added_final$station_name,3,3)))]="upstream" #stroomopwaarts
+databin.test_zeros_added_final$signal.direction[which(as.numeric(substr(databin.test_zeros_added_final$station_name_submitting,3,3))<as.numeric(substr(databin.test_zeros_added_final$station_name,3,3)))]="downstream"#stroomafwaarts
+databin.test_zeros_added_final$fsignal.direction=as.factor(databin.test_zeros_added_final$signal.direction)
+```
+
+```{r}
+data_agg_zeros_added$current.direction<-NA
+data_agg_zeros_added$current.direction[which(data_agg_zeros_added$q.melle<=0)]="upstream"
+data_agg_zeros_added$current.direction[which(data_agg_zeros_added$q.melle>0)]="downstream"
+
+databin.test_zeros_added_final$current.direction<-NA
+databin.test_zeros_added_final$current.direction[which(databin.test_zeros_added_final$q.melle<=0)]="upstream"
+databin.test_zeros_added_final$current.direction[which(databin.test_zeros_added_final$q.melle>0)]="downstream"
+```
+
+```{r}
+data_agg_zeros_added$angle.current.signal=NA
+data_agg_zeros_added$angle.current.signal[which(data_agg_zeros_added$current.direction!=data_agg_zeros_added$signal.direction)]="180"
+data_agg_zeros_added$angle.current.signal[which(data_agg_zeros_added$current.direction==data_agg_zeros_added$signal.direction)]="0"
+data_agg_zeros_added$angle.current.signal=as.factor(data_agg_zeros_added$angle.current.signal)
+
+databin.test_zeros_added_final$angle.current.signal=NA
+databin.test_zeros_added_final$angle.current.signal[which(databin.test_zeros_added_final$current.direction!=databin.test_zeros_added_final$signal.direction)]="180"
+databin.test_zeros_added_final$angle.current.signal[which(databin.test_zeros_added_final$current.direction==databin.test_zeros_added_final$signal.direction)]="0"
+databin.test_zeros_added_final$angle.current.signal=as.factor(databin.test_zeros_added_final$angle.current.signal)
+```
+
+```{r}
+data_agg_zeros_added$q.melle.abs<-abs(data_agg_zeros_added$q.melle)
+databin.test_zeros_added_final$q.melle.abs<-abs(databin.test_zeros_added_final$q.melle)
+```
+
+```{r}
+g1<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=water.height.schoonaarde))+geom_line()+xlab("Time")+ylab("Depth (m)")+theme_minimal()
+g1
+g2<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=Average_noise))+geom_line()+xlab("Time")+ylab("Noise (mV)")+theme_minimal()
+g2
+g3<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=Tilt_angle))+geom_line()+xlab("Time")+ylab("Tilt angle (°)")+theme_minimal()
+g3
+g4<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=wind.v.liedekerke))+geom_line()+xlab("Time")+ylab("Wind speed (m/s)")+theme_minimal()
+g4
+g5<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=temp.schellebelle))+geom_line()+xlab("Time")+ylab("Temperature (°C)")+theme_minimal()
+g5
+g6<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=cond.schellebelle))+geom_line()+xlab("Time")+ylab("Conductivity (µS/cm) at 25°C")+theme_minimal()
+g6
+g7<-ggplot(data=data_agg_zeros_added[which(data_agg_zeros_added$RecRec=="Rt1 Rt1"),],aes(x=timebin,y=neerslag.zele))+geom_line()+xlab("Time")+ylab("Precipitation (mm)")+theme_minimal()
+g7
+ggarrange(g1,g2,g3,g4,g5,g6,g7, ncol=2, nrow=4)
+ggsave("./figures/Timeseries_env.pdf",width = 10,height=10)
+```
+
+```{r}
+#remove border effect databin
+#for (i in 1:length(u))
+```
+
+```{r eval=FALSE}
+#Add boat data
+boats<-read_excel("./data/external/env/Sluispassages Zeeschelde - 2020-2-1 tem 2020-5-1_adapted.xlsx")
+boats<-boats[,c("ActualTimeOfArrival","ActualStartTime","ActualEndTime","ObjectName","Traveldirection","ShipType","Som van Length","Som van Width","Som van Draught","Som van DuurSchutting(min)")]
+boats$ActualTimeOfArrival=as.POSIXct(boats$ActualTimeOfArrival,format='%Y-%m-%d %H:%M:%S',tz="utc")
+boats$ActualStartTime=as.POSIXct(boats$ActualStartTime,format='%Y-%m-%d %H:%M:%S',tz="utc")
+boats$ActualEndTime=as.POSIXct(boats$ActualEndTime,format='%Y-%m-%d %H:%M:%S',tz="utc")
+
+boats.merel<-boats[which(boats$ObjectName=="Sluizen te Merelbeke"),]
+boats.merel.DS<-boats.merel[which(boats.merel$Traveldirection=="Afwaarts"),]
+boats.merel.US<-boats.merel[which(boats.merel$Traveldirection=="Opwaarts"),]
+
+data_agg_zeros_added<-as.data.table(data_agg_zeros_added)
+boats.merel.DS<-as.data.table(boats.merel.DS)
+boats.merel.US<-as.data.table(boats.merel.US)
+
+boats.merel.DS$timebin=boats.merel.DS$ActualEndTime
+boats.merel.US$timebin=boats.merel.US$ActualTimeOfArrival
+boats.merel.DS.US=rbind(boats.merel.DS,boats.merel.US)
+
+colnames(boats.merel.DS) <- paste(colnames(boats.merel.DS),"DS",sep = "_")
+boats.merel.DS$timebin<-boats.merel.DS$timebin
+boats.merel.DS$timebin_DS<-NULL
+colnames(boats.merel.US) <- paste(colnames(boats.merel.US),"US",sep = "_")
+boats.merel.US$timebin<-boats.merel.US$timebin
+boats.merel.US$timebin_US<-NULL
+
+setkey(data_agg_zeros_added,timebin)
+setkey(boats.merel.DS,timebin)
+setkey(boats.merel.US,timebin)
+
+df.test<-boats.merel.DS[data_agg_zeros_added,roll=-Inf]
+#x=df[,c("ActualEndTime","timebin")]
+df.test<-boats.merel.US[df.test,roll=+Inf]
+#x=df[,c("ActualTimeOfArrival_US","timebin")]
+
+# df.test<-boats.merel.DS[df,roll="nearest"]
+# df.test<-boats.merel.US[df.test,roll="nearest"]
+
+df.test$timedif.boat_US<-abs(difftime(df.test$ActualTimeOfArrival_US,df.test$timebin))
+df.test$timedif.boat_DS<-abs(difftime(df.test$ActualEndTime_DS,df.test$timebin))
+
+df.test$timedif.boat_smallest<-NA
+df.test$timedif.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$timedif.boat_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$timedif.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$timedif.boat_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+df.test$traveldirection.boat_smallest<-NA
+df.test$traveldirection.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$Traveldirection_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$traveldirection.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$Traveldirection_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+df.test$shiptype.boat_smallest<-NA
+df.test$shiptype.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$ShipType_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$shiptype.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$ShipType_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+data_agg_zeros_added<-df.test
+```
+
+```{r eval=FALSE}
+#Number of boats passing within timebin
+boats.merel.DS.US$timebin[which(boats.merel.DS.US$Traveldirection=="Afwaarts")]=boats.merel.DS.US$timebin[which(boats.merel.DS.US$Traveldirection=="Afwaarts")]+60
+boats.merel.DS.US$timebin[which(boats.merel.DS.US$Traveldirection=="Afwaarts")]=boats.merel.DS.US$timebin[which(boats.merel.DS.US$Traveldirection=="Opwaarts")]-60
+boats.merel.DS.US$timebin<-round_date(boats.merel.DS.US$timebin,"hours")
+boats.merel.DS.US$boats=1
+boats.merel.DS.US_agg <- boats.merel.DS.US %>%
+  dplyr::group_by(timebin)%>% #These variables will be present in new aggregated data frame
+  dplyr::summarise(count_sum_boats=sum(boats))
+df.test=left_join(data_agg_zeros_added,boats.merel.DS.US_agg,by="timebin")
+df.test$count_sum_boats[which(is.na(df.test$count_sum_boats)==TRUE)]=0
+
+plot(df.test$count_sum_boats,df.test$res)
+plot(df.test$count_sum_boats,df.test$Average_noise)
+df.test$fcount_sum_boats=as.factor(df.test$count_sum_boats)
+# violin.plot<-ggplot(df.test, aes(x=fcount_sum_boats, y=res)) +
+#   geom_violin(scale = "width")
+# violin.plot
+violin.plot<-ggplot(df.test, aes(x=fcount_sum_boats, y=Average_noise)) +
+  geom_violin(scale = "width")
+violin.plot
+
+data_agg_zeros_added<-df.test
+```
+
+```{r eval=FALSE}
+#Add boat data
+boats<-read_excel("./data/external/env/Sluispassages Zeeschelde - 2020-2-1 tem 2020-5-1_adapted.xlsx")
+boats<-boats[,c("ActualTimeOfArrival","ActualStartTime","ActualEndTime","ObjectName","Traveldirection","ShipType","Som van Length","Som van Width","Som van Draught","Som van DuurSchutting(min)")]
+boats$ActualTimeOfArrival=as.POSIXct(boats$ActualTimeOfArrival,format='%Y-%m-%d %H:%M:%S',tz="utc")
+boats$ActualStartTime=as.POSIXct(boats$ActualStartTime,format='%Y-%m-%d %H:%M:%S',tz="utc")
+boats$ActualEndTime=as.POSIXct(boats$ActualEndTime,format='%Y-%m-%d %H:%M:%S',tz="utc")
+
+boats.merel<-boats[which(boats$ObjectName=="Sluizen te Merelbeke"),]
+boats.merel.DS<-boats.merel[which(boats.merel$Traveldirection=="Afwaarts"),]
+boats.merel.US<-boats.merel[which(boats.merel$Traveldirection=="Opwaarts"),]
+
+databin.test_zeros_added_final<-as.data.table(databin.test_zeros_added_final)
+boats.merel.DS<-as.data.table(boats.merel.DS)
+boats.merel.US<-as.data.table(boats.merel.US)
+
+boats.merel.DS$date_time_0m=boats.merel.DS$ActualEndTime
+boats.merel.US$date_time_0m=boats.merel.US$ActualTimeOfArrival
+boats.merel.DS.US=rbind(boats.merel.DS,boats.merel.US)
+
+colnames(boats.merel.DS) <- paste(colnames(boats.merel.DS),"DS",sep = "_")
+boats.merel.DS$date_time_0m<-boats.merel.DS$date_time_0m
+boats.merel.DS$date_time_0m_DS<-NULL
+colnames(boats.merel.US) <- paste(colnames(boats.merel.US),"US",sep = "_")
+boats.merel.US$date_time_0m<-boats.merel.US$date_time_0m
+boats.merel.US$date_time_0m_US<-NULL
+
+setkey(databin.test_zeros_added_final,date_time_0m)
+setkey(boats.merel.DS,date_time_0m)
+setkey(boats.merel.US,date_time_0m)
+
+df.test<-boats.merel.DS[databin.test_zeros_added_final,roll=-Inf]
+#x=df[,c("ActualEndTime","date_time_0m")]
+df.test<-boats.merel.US[df.test,roll=+Inf]
+#x=df[,c("ActualTimeOfArrival_US","date_time_0m")]
+
+# df.test<-boats.merel.DS[df,roll="nearest"]
+# df.test<-boats.merel.US[df.test,roll="nearest"]
+
+df.test$timedif.boat_US<-abs(difftime(df.test$ActualTimeOfArrival_US,df.test$date_time_0m))
+df.test$timedif.boat_DS<-abs(difftime(df.test$ActualEndTime_DS,df.test$date_time_0m))
+
+df.test$timedif.boat_smallest<-NA
+df.test$timedif.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$timedif.boat_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$timedif.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$timedif.boat_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+df.test$traveldirection.boat_smallest<-NA
+df.test$traveldirection.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$Traveldirection_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$traveldirection.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$Traveldirection_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+df.test$shiptype.boat_smallest<-NA
+df.test$shiptype.boat_smallest[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]<-df.test$ShipType_DS[which(df.test$timedif.boat_US>df.test$timedif.boat_DS)]
+df.test$shiptype.boat_smallest[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]<-df.test$ShipType_US[which(df.test$timedif.boat_US<df.test$timedif.boat_DS)]
+
+databin.test_zeros_added_final<-df.test
+```
+
+```{r}
+databin.test_zeros_added_final$angle.wind.signal<-NA
+databin.test_zeros_added_final$angle.wind.signal[which(databin.test_zeros_added_final$signal.direction=="downstream")]=databin.test_zeros_added_final$wind.r.liedekerke[which(databin.test_zeros_added_final$signal.direction=="downstream")]-234
+databin.test_zeros_added_final$angle.wind.signal[which(databin.test_zeros_added_final$signal.direction=="upstream")]=databin.test_zeros_added_final$wind.r.liedekerke[which(databin.test_zeros_added_final$signal.direction=="upstream")]-54
+databin.test_zeros_added_final$angle.wind.signal.rad=deg2rad(databin.test_zeros_added_final$angle.wind.signal)
+databin.test_zeros_added_final$angle.wind.signal.cos=cos(databin.test_zeros_added_final$angle.wind.signal.rad)
+databin.test_zeros_added_final$angle.wind.signal.sin=sin(databin.test_zeros_added_final$angle.wind.signal.rad)
+
+data_agg_zeros_added$angle.wind.signal<-NA
+data_agg_zeros_added$angle.wind.signal[which(data_agg_zeros_added$signal.direction=="downstream")]=data_agg_zeros_added$wind.r.liedekerke[which(data_agg_zeros_added$signal.direction=="downstream")]-234
+data_agg_zeros_added$angle.wind.signal[which(data_agg_zeros_added$signal.direction=="upstream")]=data_agg_zeros_added$wind.r.liedekerke[which(data_agg_zeros_added$signal.direction=="upstream")]-54
+data_agg_zeros_added$angle.wind.signal.rad=deg2rad(data_agg_zeros_added$angle.wind.signal)
+data_agg_zeros_added$angle.wind.signal.cos=cos(data_agg_zeros_added$angle.wind.signal.rad)
+data_agg_zeros_added$angle.wind.signal.sin=sin(data_agg_zeros_added$angle.wind.signal.rad)
+```
+
+```{r}
+databin.test_zeros_added_final$distance.to.border<-NA
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt1")]=8
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt2")]=7.51
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt3")]=6.41
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt4")]=8.80
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt5")]=13.89
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt6")]=16.28
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt7")]=7.94
+databin.test_zeros_added_final$distance.to.border[which(databin.test_zeros_added_final$station_name=="Rt8")]=7.41
+
+data_agg_zeros_added$distance.to.border<-NA
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt1")]=8
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt2")]=7.51
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt3")]=6.41
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt4")]=8.80
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt5")]=13.89
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt6")]=16.28
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt7")]=7.94
+data_agg_zeros_added$distance.to.border[which(data_agg_zeros_added$station_name=="Rt8")]=7.41
+
+databin.test_zeros_added_final$distance.to.border.submitting<-NA
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt1")]=8
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt2")]=7.51
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt3")]=6.41
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt4")]=8.80
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt5")]=13.89
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt6")]=16.28
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt7")]=7.94
+databin.test_zeros_added_final$distance.to.border.submitting[which(databin.test_zeros_added_final$station_name_submitting=="Rt8")]=7.41
+
+data_agg_zeros_added$distance.to.border.submitting<-NA
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt1")]=8
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt2")]=7.51
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt3")]=6.41
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt4")]=8.80
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt5")]=13.89
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt6")]=16.28
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt7")]=7.94
+data_agg_zeros_added$distance.to.border.submitting[which(data_agg_zeros_added$station_name_submitting=="Rt8")]=7.41
+```
+
+```{r}
+bathymetry<-read_excel("./data/external/telemetry/Bathymetry_VLIZ.xlsx")
+bathymetry <- bathymetry %>% separate(time, c("date", "time"),sep="T")
+bathymetry$diepte <- bathymetry$diepte/100
+bathymetry$timebin<-as.POSIXct(bathymetry$date,format='%Y-%m-%d')
+bathymetry <- filter(bathymetry,timebin>=as.POSIXct("2020-02-26 12:00:00", tz="UTC"),timebin<as.POSIXct("2020-04-30 12:00:00", tz="UTC"))
+bathymetry.mean <- bathymetry %>%
+  dplyr::group_by(station_name)%>% #These variables will be present in new aggregated data frame
+  dplyr::summarise(diepte=mean(diepte))
+
+databin.test_zeros_added_final=merge(databin.test_zeros_added_final,bathymetry.mean,by="station_name")
+data_agg_zeros_added=merge(data_agg_zeros_added,bathymetry.mean,by="station_name")
+
+colnames(bathymetry.mean)=c("station_name_submitting","diepte_submitting")
+
+databin.test_zeros_added_final=merge(databin.test_zeros_added_final,bathymetry.mean,by="station_name_submitting")
+data_agg_zeros_added=merge(data_agg_zeros_added,bathymetry.mean,by="station_name_submitting")
+
+databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected<-databin.test_zeros_added_final$water.height.schoonaarde+databin.test_zeros_added_final$diepte_submitting
+databin.test_zeros_added_final$water.height.schoonaarde.corrected<-databin.test_zeros_added_final$water.height.schoonaarde+databin.test_zeros_added_final$diepte
+
+data_agg_zeros_added$water.height.schoonaarde.submitting.corrected<-data_agg_zeros_added$water.height.schoonaarde+data_agg_zeros_added$diepte_submitting
+data_agg_zeros_added$water.height.schoonaarde.corrected<-data_agg_zeros_added$water.height.schoonaarde+data_agg_zeros_added$diepte
+
+```
+
+```{r}
+plot(data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt8")],data_agg_zeros_added$sea_depth[which(data_agg_zeros_added$station_name=="Rt8")])
+
+plot(data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt7")],data_agg_zeros_added$sea_depth[which(data_agg_zeros_added$station_name=="Rt7")])
+```
+
+```{r}
+model.depth<-lm(sea_depth~water.height.schoonaarde.corrected,data=data_agg_zeros_added[which(data_agg_zeros_added$station_name=="Rt7" | data_agg_zeros_added$station_name=="Rt8"),])
+summary(model.depth)
+
+model.depth7<-lm(sea_depth~water.height.schoonaarde.corrected,data=data_agg_zeros_added[which(data_agg_zeros_added$station_name=="Rt7"),])
+summary(model.depth7)
+
+model.depth8<-lm(sea_depth~water.height.schoonaarde.corrected,data=data_agg_zeros_added[which(data_agg_zeros_added$station_name=="Rt8"),])
+summary(model.depth8)
+
+model.depth<-lm(sea_depth~water.height.schoonaarde.corrected,data=data_agg_zeros_added[which(data_agg_zeros_added$station_name=="Rt7" | data_agg_zeros_added$station_name=="Rt8"),])
+summary(model.depth)
+```
+
+```{r}
+data_agg_zeros_added$water.height.schoonaarde.corrected=data_agg_zeros_added$water.height.schoonaarde.corrected-0.3
+data_agg_zeros_added$water.height.schoonaarde.submitting.corrected=data_agg_zeros_added$water.height.schoonaarde.submitting.corrected-0.3
+
+data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt1")]=data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt1")]-0.2
+
+data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt2")]=data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt2")]-0.2
+
+data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt8")]=data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt8")]-0.2
+
+data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt1")]=data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt1")]-0.2
+
+data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt2")]=data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt2")]-0.2
+
+data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt8")]=data_agg_zeros_added$water.height.schoonaarde.submitting.corrected[which(data_agg_zeros_added$station_name_submitting=="Rt8")]-0.2
+```
+
+```{r}
+plot(data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt8")],data_agg_zeros_added$sea_depth[which(data_agg_zeros_added$station_name=="Rt8")])
+
+plot(data_agg_zeros_added$water.height.schoonaarde.corrected[which(data_agg_zeros_added$station_name=="Rt7")],data_agg_zeros_added$sea_depth[which(data_agg_zeros_added$station_name=="Rt7")])
+```
+
+```{r}
+databin.test_zeros_added_final$water.height.schoonaarde.corrected=databin.test_zeros_added_final$water.height.schoonaarde.corrected-0.3
+databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected=databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected-0.3
+
+databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt1")]=databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt1")]-0.2
+
+databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt2")]=databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt2")]-0.2
+
+databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt8")]=databin.test_zeros_added_final$water.height.schoonaarde.corrected[which(databin.test_zeros_added_final$station_name=="Rt8")]-0.2
+
+databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt1")]=databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt1")]-0.2
+
+databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt2")]=databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt2")]-0.2
+
+databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt8")]=databin.test_zeros_added_final$water.height.schoonaarde.submitting.corrected[which(databin.test_zeros_added_final$station_name_submitting=="Rt8")]-0.2
+```
+
+```{r}
+write.csv(databin.test_zeros_added_final,file="./data/internal/telemetry/databin_zeros_added_with_env.csv")
+write.csv(data_agg_zeros_added,file="./data/internal/telemetry/data_agg_zeros_added_with_env.csv")
+```

@@ -1,0 +1,400 @@
+---
+title: "Model_Development_DR_ZS"
+author: "Stijn Bruneel"
+date: "2 februari 2021"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+source("source/Libraries.R")
+source("source/Functions.R")
+```
+
+```{r}
+RUN="NO"
+```
+
+```{r}
+df<-read.csv("./data/internal/telemetry/databin_zeros_added_with_env.csv")
+```
+
+```{r}
+df$date_time_0m<-as.POSIXct(df$date_time_0m, tz="UTC")
+```
+
+```{r eval=FALSE}
+df.subset <- filter(df,date_time_0m>=as.POSIXct("2020-03-07 01:00:00",tz="UTC"),date_time_0m<as.POSIXct("2020-03-14 01:00:00",tz="UTC"))
+write.csv(df.subset,"./data/internal/telemetry/databin_zeros_added_with_env_subset.csv")
+```
+
+```{r eval=FALSE}
+df<-read.csv("./data/internal/telemetry/databin_zeros_added_with_env_subset.csv")
+```
+
+```{r}
+df$date_time_0m<-as.POSIXct(df$date_time_0m, tz="UTC")
+df$counts=as.factor(df$counts)
+df$angle.current.signal<-as.factor(df$angle.current.signal)
+df$timebin=df$date_time_0m
+```
+
+```{r}
+df$counts=as.factor(df$counts)
+df$angle.current.signal<-as.factor(df$angle.current.signal)
+df$timebin=df$date_time_0m
+```
+
+```{r}
+df=df[-which(df$station_name=="Rt6" | df$station_name_submitting=="Rt6"),]
+df=df[-which(df$distm50==0),]
+```
+
+```{r}
+foldername="./models/loess_noise_models/"
+df$Average_noise_receiving_loess=NA
+df$Average_noise_submitting_loess=NA
+filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    df$Average_noise_receiving_loess[which(df$station_name==substr(filename, 51, 53))] = predict(loessMod10_noise,newdata=(df$timebin[which(df$station_name==substr(filename, 51, 53))]))
+    df$Average_noise_submitting_loess[which(df$station_name_submitting==substr(filename, 51, 53))] = predict(loessMod10_noise,newdata=(df$timebin[which(df$station_name_submitting==substr(filename, 51, 53))]))
+
+  }
+
+foldername="./models/loess_tilt_angle_models/"
+df$Tilt_angle_receiving_loess=NA
+df$Tilt_angle_submitting_loess=NA
+filelist<-list.files(foldername)
+  for (i in 1:length(filelist)){
+    filename=paste(foldername,filelist[i],sep="")
+    load(filename)
+    df$Tilt_angle_receiving_loess[which(df$station_name==substr(filename, 61, 63))] = predict(loessMod10_tilt_angle,newdata=(df$timebin[which(df$station_name==substr(filename, 61, 63))]))
+    df$Tilt_angle_submitting_loess[which(df$station_name_submitting==substr(filename, 61, 63))] = predict(loessMod10_tilt_angle,newdata=(df$timebin[which(df$station_name_submitting==substr(filename, 61, 63))]))
+  }
+```
+
+```{r}
+if(any(is.na(df$Average_noise_receiving_loess))==TRUE){
+  df=df[-which(is.na((df$Average_noise_receiving_loess)==TRUE)),]
+}
+
+df=df[-which((df$water.height.schoonaarde.corrected<0 | df$water.height.schoonaarde.submitting.corrected<0)),]
+df=df[-which(df$Tilt_angle_receiving_loess>90),]
+df=df[-which(df$Tilt_angle_submitting_loess>90),]
+```
+
+```{r}
+df <- df %>%
+  dplyr::mutate(Tilt_angle_receiving.scaled = scale_vars(Tilt_angle_receiving_loess),
+                Tilt_angle_submitting.scaled = scale_vars(Tilt_angle_submitting_loess),
+                water.height.schoonaarde.scaled = scale_vars(water.height.schoonaarde.corrected),
+                water.height.schoonaarde.submitting.scaled = scale_vars(water.height.schoonaarde.submitting.corrected),
+                cond.schellebelle.scaled = scale_vars(cond.schellebelle),
+                q.melle.abs.scaled = scale_vars(q.melle.abs),
+                Average_noise_receiving.scaled = scale_vars(Average_noise_receiving_loess),
+                Average_noise_submitting.scaled = scale_vars(Average_noise_submitting_loess),
+                Temperature.scaled=scale_vars(temp.schellebelle),
+                O2.schellebelle.scaled=scale_vars(O2.schellebelle),
+                distm.scaled=scale_vars(distm),
+                tidal.range.scaled=scale_vars(tidal.range.HWLW.schoonaarde),
+                wind.v.scaled=scale_vars(wind.v.liedekerke),
+                wind.r.scaled=scale_vars(wind.r.liedekerke),
+                angle.wind.signal.cos.scaled=scale_vars(angle.wind.signal.cos),
+                angle.wind.signal.sin.scaled=scale_vars(angle.wind.signal.sin),
+                neerslag.scaled=scale_vars(neerslag.zele.5min),
+                turb.scaled=scale_vars(turb.schellebelle),
+                distance.to.border.scaled=scale_vars( distance.to.border),
+                q.h=scale_vars(q.melle.abs/water.height.schoonaarde)
+  )
+```
+
+```{r}
+df$ncounts=NA
+df$ncounts[which(df$counts=="0")]=0
+df$ncounts[which(df$counts=="1")]=1
+```
+
+```{r}
+x=as.data.frame(t(table(df$station_name_submitting)))
+df$weight=NA
+for (i in unique(df$station_name_submitting)){
+  df$weight[which(df$station_name_submitting==i)]=(1/x$Freq[which(x$Var2==i)])*1000000
+}
+```
+
+```{r}
+form.glm.empty=as.formula(counts ~ 1
+                      )
+
+form.glm.full_interaction=as.formula(counts ~ (distm.scaled
+                      + q.melle.abs.scaled
+                      + angle.current.signal
+                      + water.height.schoonaarde.scaled + water.height.schoonaarde.submitting.scaled
+                      + Tilt_angle_receiving.scaled
+                      + Tilt_angle_submitting.scaled
+                      + Temperature.scaled
+                      + wind.v.scaled 
+                      + angle.wind.signal.sin.scaled
+                      + angle.wind.signal.cos.scaled
+                      + neerslag.scaled
+                      ) * distm.scaled
+                      + Tilt_angle_receiving.scaled * angle.current.signal
+                      + Tilt_angle_submitting.scaled * angle.current.signal
+                      + wind.v.scaled * angle.wind.signal.sin.scaled
+                      + wind.v.scaled * angle.wind.signal.cos.scaled
+                      + q.melle.abs.scaled * angle.current.signal
+                      )
+
+```
+
+```{r}
+if (RUN=="YES"){
+  glm.empty<-glm(form.glm.empty,data=df,family=binomial(link="logit"),na.action=na.exclude,weights = df$weight)
+  
+  glm.full_interaction<-glm(form.glm.full_interaction,data=df,family=binomial(link="logit"),na.action=na.exclude,weights = df$weight)
+  save(glm.full_interaction,file="./models/GLM/glm_full_databin_interaction.Rdata")
+  glm.AIC_interaction <- stepAIC(glm.empty,trace = TRUE,direction="forward",scope=list(upper=glm.full_interaction,lower=glm.empty),k=log(1478784))
+  save(glm.AIC_interaction,file="./models/GLM/glm_AIC_databin_interaction.Rdata")
+
+}
+if (RUN=="NO"){
+ 
+  load("./models/GLM/glm_full_databin_interaction.Rdata")
+  load("./models/GLM/glm_AIC_databin_interaction.Rdata")
+  
+}
+```
+
+```{r}
+
+x=round(as.data.frame(summary(glm.AIC_interaction)$coefficients),digits = 3)
+x
+write.csv(x,"./data/internal/GLM_bin.csv")
+
+car::vif(glm.AIC_interaction)
+
+bin.model=glm.AIC_interaction
+summary(bin.model)
+
+#mCFaddenR2<-1-(logLik(bin.model)/logLik(glm.empty))#
+```
+
+```{r}
+df$pred=predict(bin.model,df,type="response",na.action = na.pass) 
+df$res=df$ncounts-df$pred
+
+car::vif(bin.model)
+
+hist(df$res)
+
+optCutOff <- optimalCutoff(df$counts,df$pred)[1] #http://r-statistics.co/Logistic-Regression-With-R.html
+misClassError(df$counts, df$pred, threshold = optCutOff) #http://r-statistics.co/Logistic-Regression-With-R.html
+
+plotROC(df$counts,df$pred)
+
+binnedplot(na.omit(df$pred[1:1000000]), #error because of too much data >1000000
+           na.omit(df$res[1:1000000]), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray")
+
+binnedplot(na.omit(df$Average_noise_receiving[1:1000000]), #error because of too much data >1000000
+           na.omit(df$res[1:1000000]), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray")
+
+binnedplot(na.omit(df$Tilt_angle_receiving[1:1000000]), #error because of too much data >1000000
+           na.omit(df$res[1:1000000]), 
+           nclass = NULL, 
+           xlab = "Expected Values", 
+           ylab = "Average residual", 
+           main = "Binned residual plot", 
+           cex.pts = 0.8, 
+           col.pts = 1, 
+           col.int = "gray")
+
+
+invlogit <- function(x) exp(x)/(1 + exp(x))
+x <- seq(-3, 3, 0.01)
+y <- invlogit(coef(bin.model)[1]+coef(bin.model)[2]*x)
+ggplot(data.frame(x = x, y = y), aes(x, y)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(distance)"))) + 
+  ylab("probability of detection") +
+  xlab("distance")
+y <- invlogit(coef(bin.model)[1]+coef(bin.model)[5]*x)
+ggplot(data.frame(x = x, y = y), aes(x, y)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(noise)"))) + 
+  ylab("probability of detection") +
+  xlab("noise")
+
+plot(df$distm.scaled,df$res)
+```
+
+```{r}
+invlogit <- function(x) exp(x)/(1 + exp(x))
+x <- seq(-1.5, 1, 0.01)
+
+shortdist180 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]+coef(bin.model)[19]*x*-1.2+coef(bin.model)[23]*-1.2+coef(bin.model)[25]*x+coef(bin.model)[30]*x*-1.2)
+mediumdist180 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]+coef(bin.model)[19]*x*0+coef(bin.model)[23]*0+coef(bin.model)[25]*x+coef(bin.model)[30]*x*0)
+longdist180 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]+coef(bin.model)[19]*x*2.5+coef(bin.model)[23]*2.5+coef(bin.model)[25]*x+coef(bin.model)[30]*x*2.5)
+
+ggplot(data.frame(x = x, y = shortdist180), aes(x, shortdist180)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) short distance, different direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+
+ggplot(data.frame(x = x, y = mediumdist180), aes(x, mediumdist180)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) medium distance, different direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+
+ggplot(data.frame(x = x, y = longdist180), aes(x, longdist180)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) long distance, different direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+
+shortdist0 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]*-1+coef(bin.model)[19]*x*-1.2+coef(bin.model)[23]*-1.2*-1+coef(bin.model)[25]*x*-1+coef(bin.model)[30]*x*-1.2*-1)
+mediumdist0 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]*-1+coef(bin.model)[19]*x*0+coef(bin.model)[23]*0*-1+coef(bin.model)[25]*x*-1+coef(bin.model)[30]*x*0*-1)
+longdist0 <- invlogit(coef(bin.model)[1]+coef(bin.model)[7]*x+coef(bin.model)[9]*-1+coef(bin.model)[19]*x*2.5+coef(bin.model)[23]*2.5*-1+coef(bin.model)[25]*x*-1+coef(bin.model)[30]*x*2.5*-1)
+
+ggplot(data.frame(x = x, y = shortdist0), aes(x, shortdist0)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) short distance, same direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+
+ggplot(data.frame(x = x, y = mediumdist0), aes(x, mediumdist0)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) medium distance, same direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+
+ggplot(data.frame(x = x, y = longdist0), aes(x, longdist0)) +
+  geom_line() +
+  ggtitle(expression(paste("y = ", logit^-1,"(q) long distance, same direction signal and current"))) + 
+  ylab("probability of detection") +
+  xlab("q")
+```
+
+
+```{r eval=FALSE}
+df$logit=log(df$pred/(1-df$pred))
+
+ggplot(df[c(1:50000),], aes(distm,logit))+
+  geom_point(size = 0.5, alpha = 0.5) 
+ggplot(df[c(1:50000),], aes(Average_noise_receiving,logit))+
+  geom_point(size = 0.5, alpha = 0.5) 
+ggplot(df[c(1:50000),], aes(Tilt_angle_receiving,logit))+
+  geom_point(size = 0.5, alpha = 0.5) 
+ggplot(df[c(1:50000),], aes(Tilt_angle_submitting,logit))+
+  geom_point(size = 0.5, alpha = 0.5)
+ggplot(df[c(1:50000),], aes((water.height.schoonaarde),logit))+
+  geom_point(size = 0.5, alpha = 0.5) 
+```
+
+```{r}
+df=df[order(df$distm),]
+```
+
+```{r warning=FALSE}
+for (i in unique(df$RecRec)){
+  df_150m<-df[which(df$RecRec==i),]
+  df_150m=df_150m[order(df_150m$date_time_0m),]
+  
+  #wave.test.single<-Single_wavelet_analysis(data=df_150m[,c("date_time_0m","ncounts")],response="ncounts")
+  #wave.test.single<-Single_wavelet_analysis(data=df_150m[,c("date_time_0m","res")],response="res")
+  
+  df_150m <- filter(df_150m,date_time_0m>=as.POSIXct("2020-03-01 01:00:00",tz="UTC"),date_time_0m<as.POSIXct("2020-03-10 01:00:00",tz="UTC"))
+  
+  p <- df_150m %>%
+      ggplot2::ggplot(aes(x=date_time_0m, y=ncounts)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob") +
+      theme_ipsum() + geom_line(aes(x=date_time_0m, y=q.melle.abs.scaled)) + ggtitle(i)
+  #print(p)
+  
+  q <- df_150m %>%
+      ggplot2::ggplot(aes(x=date_time_0m, y=res)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob") +
+      theme_ipsum() + geom_line(aes(x=date_time_0m, y=q.melle.abs.scaled)) + ggtitle(i)
+  #print(q)
+  
+  r <- df_150m %>%
+      ggplot2::ggplot(aes(x=date_time_0m, y=ncounts)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob") +
+      theme_ipsum() + geom_line(aes(x=date_time_0m, y=Average_noise_receiving.scaled)) + ggtitle(i)
+  print(r)
+  
+  s <- df_150m %>%
+      ggplot2::ggplot(aes(x=date_time_0m, y=res)) +
+      geom_area(fill="#69b3a2", alpha=0.5) +
+      geom_line(color="#69b3a2") +
+      ylab("Det.Prob") +
+      theme_ipsum() + geom_line(aes(x=date_time_0m, y=Average_noise_receiving.scaled)) + ggtitle(i)
+  print(s)
+}
+```
+  
+```{r}
+for (i in unique(df$RecRec)){
+  df_150m<-df[which(df$RecRec==i),]
+  df_150m=df_150m[order(df_150m$date_time_0m),]
+  plot(df_150m$Average_noise_receiving_loess,df_150m$res,main=i)
+  plot(df_150m$Average_noise_receiving,df_150m$res,main=i)
+}
+``` 
+  
+```{r}
+for (i in unique(df$RecRec)){
+  df_150m<-df[which(df$RecRec==i),]
+  df_150m=df_150m[order(df_150m$date_time_0m),]
+  plot(df_150m$Average_noise_receiving_loess,df_150m$ncounts,main=i)
+  plot(df_150m$Average_noise_receiving_loess,df_150m$res,main=i)
+  plot(df_150m$Average_noise_receiving,df_150m$counts,main=i)
+  plot(df_150m$Average_noise_receiving,df_150m$res,main=i)
+  plot(df_150m$Average_noise_receiving,df_150m$Average_noise_receiving_loess,main=i)
+  plot(df_150m$Tilt_angle_receiving,df_150m$Tilt_angle_receiving_loess,main=i)
+  ts.plot(df_150m$Average_noise_receiving,main=i)
+  ts.plot(df_150m$Average_noise_receiving_loess,main=i)
+  ts.plot(df_150m$Tilt_angle_submitting,main=i)
+  ts.plot(df_150m$Tilt_angle_receiving,main=i)
+  ts.plot(df_150m$Tilt_angle_receiving_loess,main=i)
+}
+```
+
+```{r}
+for (i in unique(df$RecRec)){
+  df_150m<-df[which(df$RecRec==i),]
+  df_150m=df_150m[order(df_150m$date_time_0m),]
+  if (length(unique(df_150m$ncounts))==1){}else{acf(df_150m$ncounts,lag.max=1000,main=paste("original",i),ylab=paste("original",i))}
+  acf(df_150m$res,lag.max=1000,main=paste("residuals",i),ylab=paste("residuals",i))
+  hist(df_150m$res,main=paste("residuals",i))
+}
+```
+
